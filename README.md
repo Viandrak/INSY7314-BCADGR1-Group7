@@ -16,6 +16,21 @@ This repository is developed incrementally across three parts:
 
 ---
 
+## Table of contents
+
+- [System overview](#system-overview)
+- [Intended users](#intended-users)
+- [Architecture](#architecture)
+- [Backend structure](#backend-structure)
+- [Request flow](#request-flow)
+- [Security decisions](#security-decisions)
+- [Setup](#setup)
+- [API testing](#api-testing)
+- [Team](#team)
+- [References](#references)
+
+---
+
 ## System overview
 
 HustleHub+ is designed around the MERN stack — MongoDB, Express, React, and Node.js. The MERN architecture was selected because it allows the development team to use JavaScript across both the frontend and backend, supporting consistent development conventions and data handling across the application.
@@ -35,6 +50,8 @@ HustleHub+ supports three distinct user roles, each with different permissions a
 Designing around these three roles from the start — rather than adding role distinctions later — ensures that access control decisions are consistent across every endpoint as the platform grows.
 
 ## Architecture
+
+![HustleHub+ architecture diagram](https://github.com/user-attachments/assets/7a1e8bbf-1b95-48d3-9147-d0e8fe8e532f)
 
 The system is designed around a React frontend that will communicate with the Express backend using a REST API with JSON over HTTPS.
 
