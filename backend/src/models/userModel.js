@@ -4,11 +4,12 @@
 const users = [];
 
 function findUserByEmail(email) {
-  return users.find((user) => user.email === email);
+  const normalizedEmail = email.toLowerCase();
+  return users.find((user) => user.email === normalizedEmail);
 }
 
 function createUser({ id, email, passwordHash, role }) {
-  const newUser = { id, email, passwordHash, role };
+  const newUser = { id, email: email.toLowerCase(), passwordHash, role };
   users.push(newUser);
   return newUser;
 }
