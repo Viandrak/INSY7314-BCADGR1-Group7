@@ -427,3 +427,8 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# SSL certificates (local dev, HustleHub+)
+*.pem
+*.key
+*.crt
