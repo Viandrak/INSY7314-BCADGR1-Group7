@@ -42,6 +42,33 @@ All security-relevant logic is designed to sit inside the backend's **trust boun
 
 The registration endpoint includes required-field checks and case-insensitive duplicate-user detection. Passwords are hashed using bcrypt before being stored, ensuring plaintext passwords are never retained at any point. Login is handled via JWT-based authentication: on successful login, the backend issues a token containing the user's ID and role, which is required on all subsequent requests to protected routes. Role-based access control and centralised error handling middleware ensure that access is restricted appropriately by role and that errors are returned in a safe, consistent format that does not expose internal system details.
 
+## Backend structure
+
+The backend follows a modular Express structure with clear separation of concerns. Each folder has a single, well-defined responsibility, which keeps the codebase easy to navigate, test, and extend as new features (gigs, bookings, transactions) are added in later parts:
+
+| Folder | Responsibility |
+|--------|-----------------|
+| `src/routes` | Defines API endpoints and maps them to controllers |
+| `src/controllers` | Handles request/response logic for each route |
+| `src/models` | Defines data structures (temporary in-memory storage for Part 1) |
+| `src/services` | Reusable business logic, such as password hashing |
+| `src/middleware` | Cross-cutting request handling, such as authentication checks and validation |
+| `src/utils` | Shared helpers, including a consistent response format used across all endpoints |
+
+This structure keeps each layer focused on one job: routes handle *where* a request goes, controllers handle *what* happens to it, services and models handle the *underlying logic and data*, and utilities keep shared behaviour — like response formatting — consistent everywhere it's used.
+
+## Request flow
+
+The current registration flow follows five steps. Once Person 3's validation middleware and Person 2's authentication middleware are integrated, this will expand to a full request pipeline: route → validation/sanitisation middleware → authentication/authorisation middleware (where required) → controller → service/model → response.
+
+1. **Request initiated** — the frontend sends a request over HTTPS to an endpoint such as `POST /api/auth/register`
+2. **Routing** — Express routes the request to the relevant controller
+3. **Validation and checks** — the controller performs the applicable request checks, such as required-field and duplicate-email checks
+4. **Business logic** — on success, the controller calls the relevant service (e.g. password hashing) and model function
+5. **Response** — a consistent JSON response is returned, using a shared `success`/`message` format so the frontend can handle every response the same way, regardless of endpoint
+
+Keeping this flow consistent across every endpoint means that as new features are added in Part 2, they follow the exact same pattern — reducing the chance of inconsistent error handling or response shapes creeping into the API over time.
+
 ## Security decisions
 
 <!-- Person 2: add your section here explaining password hashing, JWT, and HTTPS decisions, with appropriate sources -->
