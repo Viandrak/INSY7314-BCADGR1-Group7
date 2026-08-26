@@ -1,16 +1,17 @@
 const { createUser, findUserByEmail } = require('../models/userModel');
 const { hashPassword } = require('../services/passwordService');
+const { sendSuccess, sendError } = require('../utils/responseHandler');
 
 function register(req, res) {
   const { email, password, role } = req.body;
 
   if (!email || !password || !role) {
-    return res.status(400).json({ error: 'Email, password, and role are required.' });
+    return sendError(res, 400, 'Email, password, and role are required.');
   }
 
   const existingUser = findUserByEmail(email);
   if (existingUser) {
-    return res.status(409).json({ error: 'An account with this email already exists.' });
+    return sendError(res, 409, 'An account with this email already exists.');
   }
 
   const id = Date.now().toString();
@@ -20,10 +21,11 @@ function register(req, res) {
 
   const newUser = createUser({ id, email, passwordHash, role });
 
-  return res.status(201).json({
-    message: 'User registered successfully.',
+  return sendSuccess(res, 201, 'User registered successfully.', {
     user: { id: newUser.id, email: newUser.email, role: newUser.role },
   });
 }
+
+// Person 2 will add: function login(req, res) { ... }
 
 module.exports = { register };
