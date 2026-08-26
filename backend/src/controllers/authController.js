@@ -1,11 +1,5 @@
-const crypto = require('crypto');
 const { createUser, findUserByEmail } = require('../models/userModel');
-
-// Temporary placeholder hash — NOT secure for production.
-// Person 2 will replace this with proper bcrypt hashing and salting.
-function tempHashPassword(password) {
-  return crypto.createHash('sha256').update(password).digest('hex');
-}
+const { hashPassword } = require('../services/passwordService');
 
 function register(req, res) {
   const { email, password, role } = req.body;
@@ -20,7 +14,9 @@ function register(req, res) {
   }
 
   const id = Date.now().toString();
-  const passwordHash = tempHashPassword(password);
+
+  // Temporary placeholder hash — Person 2 will replace with bcrypt hashing + salting.
+  const passwordHash = hashPassword(password);
 
   const newUser = createUser({ id, email, passwordHash, role });
 
