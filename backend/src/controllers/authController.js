@@ -26,6 +26,6 @@ function register(req, res) {
   });
 }
 
-// Person 2 will add: function login(req, res) { ... }
+
 
 module.exports = { register };
