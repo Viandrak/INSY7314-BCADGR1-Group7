@@ -1,6 +1,9 @@
 const express = require('express');
 require('dotenv').config();
+const fs = require('fs');
+const https = require('https');
 const authRoutes = require('./src/routes/authRoutes');
+const protectedRoutes = require('./src/routes/protectedRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -17,8 +20,17 @@ app.get('/', (req, res) => {
 // Auth routes
 app.use('/api/auth', authRoutes);
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// Protected routes
+app.use('/api/protected', protectedRoutes);
+
+// SSL certificate options
+const sslOptions = {
+  key: fs.readFileSync('./certs/localhost-key.pem'),
+  cert: fs.readFileSync('./certs/localhost.pem'),
+};
+
+https.createServer(sslOptions, app).listen(PORT, () => {
+  console.log(`HustleHub+ API running securely at https://localhost:${PORT}`);
 });
 
 
