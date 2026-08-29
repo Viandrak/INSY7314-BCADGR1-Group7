@@ -1,10 +1,13 @@
-const crypto = require('crypto');
+const bcrypt = require('bcrypt');
 
-// Temporary placeholder hash — NOT secure for production.
-// Person 2 will replace this with proper bcrypt hashing + salting,
-// and add a matching comparePassword function for login verification.
-function hashPassword(password) {
-  return crypto.createHash('sha256').update(password).digest('hex');
+const SALT_ROUNDS = 10;
+
+async function hashPassword(password) {
+  return bcrypt.hash(password, SALT_ROUNDS);
 }
 
-module.exports = { hashPassword };
+async function comparePassword(plainPassword, passwordHash) {
+  return bcrypt.compare(plainPassword, passwordHash);
+}
+
+module.exports = { hashPassword, comparePassword };
