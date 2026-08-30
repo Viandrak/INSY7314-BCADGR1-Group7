@@ -86,9 +86,65 @@ The current registration flow follows five steps. Once Person 3's validation mid
 
 Keeping this flow consistent across every endpoint means that as new features are added in Part 2, they follow the exact same pattern — reducing the chance of inconsistent error handling or response shapes creeping into the API over time.
 
-## Security decisions
+## Security Decisions
 
-<!-- Person 2: add your section here explaining password hashing, JWT, and HTTPS decisions, with appropriate sources -->
+Security was treated as a core design requirement for the authentication system, not an
+afterthought. The following decisions were made to protect user credentials and restrict access
+to sensitive functionality:
+
+- **No plain-text passwords are ever stored.** Passwords are hashed using bcrypt before being
+  saved, so even if the user store were compromised, the original passwords could not be
+  recovered.
+- **Stateless authentication via JWT.** Rather than maintaining server-side session state, the
+  server issues a signed token after login that the client presents on each subsequent request.
+  This keeps the API stateless and scalable, while still allowing routes to verify a user's
+  identity and role.
+- **Minimal data in the token payload.** Only the user's ID and role are embedded in the JWT —
+  never the password hash or other sensitive fields — reducing what could be exposed if a token
+  were intercepted or decoded.
+- **Consistent, non-revealing error messages.** Login failures return the same generic message
+  regardless of whether the email exists or the password is wrong, preventing user enumeration
+  attacks.
+- **Controlled error handling.** All error responses return a generic message and appropriate
+  HTTP status code, without leaking stack traces, file paths, or internal configuration details.
+- **Secrets kept out of source control.** The JWT signing secret is loaded from an environment
+  variable (`.env`, excluded from git) rather than hard-coded, so it cannot be exposed if the
+  repository is shared or made public.
+- **Encrypted transport via HTTPS.** All traffic, including credentials and financial data in
+  later parts of the system, is encrypted in transit using a locally trusted SSL certificate.
+
+The sections below detail the specific implementation of password hashing, JWT-based
+authentication, and HTTPS.
+
+## Password Hashing
+
+User passwords are never stored in plain text. On registration, the password is hashed using
+bcrypt with a salt round factor of 10 before being saved to the user store. bcrypt automatically
+generates and embeds a unique salt per password, which protects against rainbow table attacks
+and ensures that two users with the same password produce different hashes. During login, the
+submitted password is compared against the stored hash using bcrypt's built-in comparison
+function, which re-derives the hash using the embedded salt rather than ever decrypting it —
+password hashes are one-way and cannot be reversed.
+
+## JWT / Token-Based Authentication
+
+After a successful login, the server issues a JSON Web Token (JWT) signed with a secret key held
+only on the server (loaded from an environment variable, never hard-coded or committed to
+source control). The token payload contains only the user's ID and role — no sensitive data such
+as the password hash or email is included. The client includes this token in the `Authorization`
+header (`Bearer <token>`) on subsequent requests. Protected routes are guarded by middleware that
+verifies the token's signature and expiry before allowing the request to proceed; if verification
+fails, the request is rejected with a 401 Unauthorized response. Tokens expire after a configured
+period (default 1 hour), limiting the window in which a stolen token could be misused.
+
+## HTTPS
+
+The API is served over HTTPS using a locally generated SSL certificate (via mkcert) rather than
+plain HTTP. This encrypts data in transit between client and server, which is essential given
+that login requests carry user credentials and protected routes may return financial and
+income-related data. Running over HTTPS in development also mirrors how the application would be
+deployed in production, where a certificate from a trusted certificate authority would be used
+instead of a locally trusted one.
 
 <!-- Person 3: add your section here explaining input validation, sanitisation, and error handling decisions -->
 
@@ -128,3 +184,29 @@ OpenJS Foundation, 2024. *Express — Node.js web application framework.*
 OWASP Foundation, 2023. *REST Security Cheat Sheet.*
 [Online] Available at: https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html
 [Accessed 26 August 2026].
+
+Auth0 (n.d.) *jsonwebtoken*. 
+[Online] Available at: https://www.npmjs.com/package/jsonwebtoken 
+[Accessed: 30 August 2026].
+
+Express.js (n.d.) *Express – Node.js web application framework*. 
+[Online] Available at: https://expressjs.com/ 
+[Accessed: 30 August 2026].
+
+Internet Engineering Task Force (2015) *RFC 7519: JSON Web Token (JWT)*. 
+[Online] Available at: https://datatracker.ietf.org/doc/html/rfc7519 
+[Accessed: 30 August 2026].
+
+JWT.io (n.d.) *Introduction to JSON Web Tokens*. 
+[Online] Available at: https://jwt.io/introduction 
+[Accessed: 30 August 2026].
+
+Node.js Foundation (n.d.) *HTTPS | Node.js documentation*. 
+[Online] Available at: https://nodejs.org/api/https.html 
+[Accessed: 30 August 2026].
+
+npm, Inc. (n.d.) *bcrypt*. 
+[Online] Available at: https://www.npmjs.com/package/bcrypt 
+[Accessed: 30 August 2026].
+
+
