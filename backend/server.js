@@ -56,4 +56,18 @@ https.createServer(sslOptions, app).listen(PORT, () => {
  * OWASP Foundation, 2023. REST Security Cheat Sheet.
  * [Online] Available at: https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html
  * [Accessed 26 August 2026].
+ * 
+ * Auth0 (n.d.) jsonwebtoken. [Online] Available at: https://www.npmjs.com/package/jsonwebtoken [Accessed: 30 August 2026].
+ * 
+ * Express.js (n.d.) Express – Node.js web application framework. [Online] Available at: https://expressjs.com/ [Accessed: 30 August 2026].
+ * 
+ * Internet Engineering Task Force (2015) RFC 7519: JSON Web Token (JWT). [Online] Available at: https://datatracker.ietf.org/doc/html/rfc7519 [Accessed: 30 August 2026].
+ * 
+ * JWT.io (n.d.) Introduction to JSON Web Tokens. [Online] Available at: https://jwt.io/introduction [Accessed: 30 August 2026].
+ * 
+ * Node.js Foundation (n.d.) HTTPS | Node.js documentation. [Online] Available at: https://nodejs.org/api/https.html [Accessed: 30 August 2026].
+ * 
+ * npm, Inc. (n.d.) bcrypt. [Online] Available at: https://www.npmjs.com/package/bcrypt [Accessed: 30 August 2026].
+ * 
+ * OpenAI, 2026. ChatGPT. OpenAI. [Online] Available at: https://chatgpt.com/share/6a92ee02-acf0-83ea-8425-9488bd50c506 [Accessed 27 August 2026].
  */
