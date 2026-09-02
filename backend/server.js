@@ -4,12 +4,13 @@ const fs = require('fs');
 const https = require('https');
 const authRoutes = require('./src/routes/authRoutes');
 const protectedRoutes = require('./src/routes/protectedRoutes');
+const { notFoundHandler, centralErrorHandler } = require('./src/middleware/errorHandler');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Core middleware
-app.use(express.json());
+app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Health check route
@@ -22,6 +23,9 @@ app.use('/api/auth', authRoutes);
 
 // Protected routes
 app.use('/api/protected', protectedRoutes);
+
+app.use(notFoundHandler);
+app.use(centralErrorHandler);
 
 // SSL certificate options
 const sslOptions = {
