@@ -146,18 +146,55 @@ income-related data. Running over HTTPS in development also mirrors how the appl
 deployed in production, where a certificate from a trusted certificate authority would be used
 instead of a locally trusted one.
 
-<!-- Person 3: add your section here explaining input validation, sanitisation, and error handling decisions -->
+## Input Validation, Sanitisation & Error Handling
+
+All input to the authentication endpoints is validated and sanitised using
+`express-validator` before it reaches the controller layer. Email addresses
+are trimmed and normalised, and passwords must be at least 8 characters and
+contain an uppercase letter, a lowercase letter, and a number, reducing the
+risk of weak or malformed credentials being stored. The `role` field is
+restricted to `client` or `freelancer` at registration — an `admin` account
+cannot be self-registered through the public API, which prevents privilege
+escalation at signup. Request bodies are also capped at 10kb to guard
+against oversized or malicious payloads.
+
+Validation failures return a `400` response with a single, safe message
+using the same `{ success, message }` shape as every other endpoint, so the
+frontend can handle every response consistently regardless of which
+endpoint it called.
+
+A centralised error-handling middleware sits at the very end of the Express
+middleware chain and acts as a final safety net: any error thrown or
+rejected anywhere in the application — including malformed JSON bodies —
+is caught here, logged server-side for debugging, and converted into a
+generic, non-revealing JSON response. No stack traces, file paths, or
+internal configuration values are ever returned to the client, addressing
+the requirement that error responses must not expose internal system
+details (OWASP Foundation, 2023).
 
 ## Setup
 
 1. Clone the repository
 2. Run `npm install` inside `/backend`
 3. Copy `.env.example` to `.env`
-4. Run `npm run dev` to start the server
+4. Generate a local SSL certificate:
+   `openssl req -nodes -new -x509 -keyout certs/key.pem -out certs/cert.pem -days 365`
+5. Run `npm run dev` to start the server
+6. The API will be available at `https://localhost:<PORT>` 
+
 
 ## API testing
 
-<!-- Person 3: add a short summary here of the Postman collection and what scenarios it covers -->
+A Postman collection covering successful and failure scenarios for
+registration, login, and the protected test route is included at
+`HustleHub-Part1.postman_collection.json` (repo root). It contains 15
+requests covering: successful registration, duplicate email detection,
+missing fields, invalid email format, weak passwords, restricted role
+values, malicious/XSS input, malformed JSON bodies, successful login with
+JWT token generation, wrong password, nonexistent user, and access to a
+protected route with no token, an invalid token, and a valid token.
+Screenshots of each request/response pair are available in
+`screenshots/`.
 
 ---
 
@@ -200,6 +237,11 @@ Internet Engineering Task Force (2015) *RFC 7519: JSON Web Token (JWT)*.
 JWT.io (n.d.) *Introduction to JSON Web Tokens*. 
 [Online] Available at: https://jwt.io/introduction 
 [Accessed: 30 August 2026].
+
+
+OpenAI, 2026. ChatGPT. OpenAI. [Online] Available at: 
+https://chatgpt.com/share/6a92ee02-acf0-83ea-8425-9488bd50c506                             
+[Accessed 27 August 2026].
 
 Node.js Foundation (n.d.) *HTTPS | Node.js documentation*. 
 [Online] Available at: https://nodejs.org/api/https.html 
