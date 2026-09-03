@@ -196,6 +196,11 @@ protected route with no token, an invalid token, and a valid token.
 Screenshots of each request/response pair are available in
 `screenshots/`.
 
+## Demonstration video
+
+The demonstration video showing the HustleHub+ API running, user registration,
+login, JWT token generation, and API testing is available on YouTube: [https://youtu.be/xzw5VE2oFqo?si=wtT2fk4JAQ8Q9Yyk]
+
 ---
 
 ## Team
@@ -246,6 +251,14 @@ https://chatgpt.com/share/6a92ee02-acf0-83ea-8425-9488bd50c506
 Node.js Foundation (n.d.) *HTTPS | Node.js documentation*. 
 [Online] Available at: https://nodejs.org/api/https.html 
 [Accessed: 30 August 2026].
+
+Postman Learning Center. (n.d.). Learning Center.
+[Online] Available at: https://learning.postman.com/ 
+[Accessed 1 Sept. 2026].
+
+Owasp (2019). Input Validation OWASP Cheat Sheet Series. 
+[Online] Owasp.org. Available at: https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html
+[Accessed 1 Sept. 2026].
 
 npm, Inc. (n.d.) *bcrypt*. 
 [Online] Available at: https://www.npmjs.com/package/bcrypt 
