@@ -118,4 +118,27 @@ async function updateGig(req, res) {
   }
 }
 
-module.exports = { createGig, getAllGigs, getMyGigs, getGigById, updateGig };
+async function deleteGig(req, res) {
+  try {
+    const gig = await Gig.findById(req.params.id);
+
+    if (!gig) {
+      return sendError(res, 404, 'Gig not found.');
+    }
+
+    // Ownership check: only the freelancer who created the gig may delete it
+    if (gig.freelancer.toString() !== req.user.id) {
+      return sendError(res, 403, 'You can only delete your own gigs.');
+    }
+
+    // Existing bookings keep their own snapshot of the gig title and amount,
+    // so booking and transaction history stays intact after deletion.
+    await gig.deleteOne();
+
+    return sendSuccess(res, 200, 'Gig deleted successfully.');
+  } catch (err) {
+    return sendError(res, 500, 'An unexpected error occurred while deleting the gig.');
+  }
+}
+
+module.exports = { createGig, getAllGigs, getMyGigs, getGigById, updateGig, deleteGig };

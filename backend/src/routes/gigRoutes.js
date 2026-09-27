@@ -6,6 +6,7 @@ const {
   getMyGigs,
   getGigById,
   updateGig,
+  deleteGig,
 } = require('../controllers/gigController');
 
 const router = express.Router();
@@ -22,5 +23,6 @@ router.get('/:id', authenticate, getGigById);
 
 // Ownership is checked inside the controller
 router.patch('/:id', authenticate, updateGig);
+router.delete('/:id', authenticate, deleteGig);
 
 module.exports = router;
