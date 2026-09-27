@@ -60,3 +60,19 @@ async function startServer() {
 }
 
 startServer();
+
+/*
+ * References:
+ *
+ * express-rate-limit, 2026. express-rate-limit - Basic rate-limiting middleware for Express. [Online] Available at: https://www.npmjs.com/package/express-rate-limit [Accessed 27 September 2026].
+ *
+ * MongoDB, Inc., 2026. Transactions. MongoDB Manual. [Online] Available at: https://www.mongodb.com/docs/manual/core/transactions/ [Accessed 27 September 2026].
+ *
+ * Mongoose, 2025. Mongoose ODM documentation. [Online] Available at: https://mongoosejs.com/docs/ [Accessed 27 September 2026].
+ *
+ * OpenAI, 2026. ChatGPT. OpenAI. [Online] Available at: https://chatgpt.com/share/6ab80aa6-3a48-83ea-8842-6084ce8684fe [Accessed 27 September 2026].
+ *
+ * OWASP Foundation, 2026a. Authorization Cheat Sheet. [Online] Available at: https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html [Accessed 27 September 2026].
+ *
+ * OWASP Foundation, 2026b. Mass Assignment Cheat Sheet. [Online] Available at: https://cheatsheetseries.owasp.org/cheatsheets/Mass_Assignment_Cheat_Sheet.html [Accessed 27 September 2026].
+ */
