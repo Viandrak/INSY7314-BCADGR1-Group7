@@ -6,6 +6,7 @@ const authRoutes = require('./src/routes/authRoutes');
 const protectedRoutes = require('./src/routes/protectedRoutes');
 const gigRoutes = require('./src/routes/gigRoutes');
 const bookingRoutes = require('./src/routes/bookingRoutes');
+const incomeRoutes = require('./src/routes/incomeRoutes');
 const { notFoundHandler, centralErrorHandler } = require('./src/middleware/errorHandler');
 const { connectDB } = require('./src/config/database');
 
@@ -32,6 +33,9 @@ app.use('/api/gigs', gigRoutes);
 
 // Booking routes
 app.use('/api/bookings', bookingRoutes);
+
+// Income routes
+app.use('/api/income', incomeRoutes);
 
 app.use(notFoundHandler);
 app.use(centralErrorHandler);
