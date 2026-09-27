@@ -23,6 +23,11 @@ async function register(req, res) {
       user: { id: newUser.id, email: newUser.email, role: newUser.role },
     });
   } catch (err) {
+    // 11000 is MongoDB's duplicate key error, raised by the unique email index
+    // if two registrations with the same email arrive at the same time.
+    if (err.code === 11000) {
+      return sendError(res, 409, 'An account with this email already exists.');
+    }
     return sendError(res, 500, 'An unexpected error occurred during registration.');
   }
 }

@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: true,
+      unique: true, // Enforced by a unique index in MongoDB
       lowercase: true,
       trim: true,
       maxlength: 254,
