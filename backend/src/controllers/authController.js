@@ -1,4 +1,4 @@
-const { createUser, findUserByEmail } = require('../models/userModel');
+const User = require('../models/userModel');
 const { hashPassword, comparePassword } = require('../services/passwordService');
 const { generateToken } = require('../services/jwtService');
 const { sendSuccess, sendError } = require('../utils/responseHandler');
@@ -10,16 +10,14 @@ async function register(req, res) {
     return sendError(res, 400, 'Email, password, and role are required.');
   }
 
-  const existingUser = findUserByEmail(email);
-  if (existingUser) {
-    return sendError(res, 409, 'An account with this email already exists.');
-  }
-
-  const id = Date.now().toString();
-
   try {
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return sendError(res, 409, 'An account with this email already exists.');
+    }
+
     const passwordHash = await hashPassword(password);
-    const newUser = createUser({ id, email, passwordHash, role });
+    const newUser = await User.create({ email, passwordHash, role });
 
     return sendSuccess(res, 201, 'User registered successfully.', {
       user: { id: newUser.id, email: newUser.email, role: newUser.role },
@@ -36,12 +34,12 @@ async function login(req, res) {
     return sendError(res, 400, 'Email and password are required.');
   }
 
-  const user = findUserByEmail(email);
-  if (!user) {
-    return sendError(res, 401, 'Invalid email or password.');
-  }
-
   try {
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      return sendError(res, 401, 'Invalid email or password.');
+    }
+
     const passwordMatches = await comparePassword(password, user.passwordHash);
     if (!passwordMatches) {
       return sendError(res, 401, 'Invalid email or password.');
