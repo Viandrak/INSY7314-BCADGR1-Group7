@@ -1,11 +1,14 @@
 const express = require('express');
 const { authenticate } = require('../middleware/authMiddleware');
-const { createBooking } = require('../controllers/bookingController');
+const { createBooking, getMyBookings } = require('../controllers/bookingController');
 
 const router = express.Router();
 
-// Booking currently requires authentication.
-// Client-only role enforcement will be added by P2's RBAC middleware.
+// Booking routes currently require authentication.
+// Role-based restrictions will be added by P2's RBAC middleware.
 router.post('/', authenticate, createBooking);
+
+// Returns only bookings made by the logged-in user
+router.get('/mine', authenticate, getMyBookings);
 
 module.exports = router;
