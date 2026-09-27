@@ -15,6 +15,7 @@ const userSchema = new mongoose.Schema(
     passwordHash: {
       type: String,
       required: true,
+      select: false, // Never returned by queries unless explicitly requested
     },
     role: {
       type: String,
@@ -22,7 +23,19 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: {
+      // Remove sensitive and internal fields whenever a user is sent in a response
+      transform(doc, ret) {
+        ret.id = ret._id.toString();
+        delete ret._id;
+        delete ret.__v;
+        delete ret.passwordHash;
+        return ret;
+      },
+    },
+  }
 );
 
 const User = mongoose.model('User', userSchema);

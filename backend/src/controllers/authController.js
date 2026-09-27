@@ -40,7 +40,8 @@ async function login(req, res) {
   }
 
   try {
-    const user = await User.findOne({ email: email.toLowerCase() });
+    // passwordHash is excluded by default, so request it only here to verify the password
+    const user = await User.findOne({ email: email.toLowerCase() }).select('+passwordHash');
     if (!user) {
       return sendError(res, 401, 'Invalid email or password.');
     }
