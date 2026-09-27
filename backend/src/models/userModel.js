@@ -1,25 +1,29 @@
-// Temporary in-memory user store for Part 1.
-// Will be replaced with a MongoDB collection in a later part.
+const mongoose = require('mongoose');
 
-const users = [];
+// User model stored in MongoDB.
+// Replaces the temporary in-memory user store used in Part 1.
+const userSchema = new mongoose.Schema(
+  {
+    email: {
+      type: String,
+      required: true,
+      lowercase: true,
+      trim: true,
+      maxlength: 254,
+    },
+    passwordHash: {
+      type: String,
+      required: true,
+    },
+    role: {
+      type: String,
+      enum: ['client', 'freelancer', 'admin'],
+      required: true,
+    },
+  },
+  { timestamps: true }
+);
 
-function findUserByEmail(email) {
-  const normalizedEmail = email.toLowerCase();
-  return users.find((user) => user.email === normalizedEmail);
-}
+const User = mongoose.model('User', userSchema);
 
-function createUser({ id, email, passwordHash, role }) {
-  const newUser = { id, email: email.toLowerCase(), passwordHash, role };
-  users.push(newUser);
-  return newUser;
-}
-
-function getAllUsers() {
-  return users;
-}
-
-module.exports = {
-  findUserByEmail,
-  createUser,
-  getAllUsers,
-};
+module.exports = User;
