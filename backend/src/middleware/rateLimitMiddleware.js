@@ -10,8 +10,8 @@ function secondsUntilReset(req, windowMs) {
 }
 
 // Builds a rate limiter that returns a clear, consistent 429 response
-function createLimiter({ windowMs, limit, message }) {
-  return rateLimit({
+function createLimiter({ windowMs, limit, message, keyGenerator }) {
+  const options = {
     windowMs,
     limit,
     standardHeaders: 'draft-7', // Sends RateLimit headers so clients can see their remaining requests
@@ -25,7 +25,15 @@ function createLimiter({ windowMs, limit, message }) {
         retryAfterSeconds,
       });
     },
-  });
+  };
+
+  // By default requests are counted per IP address; a custom key
+  // generator can count them per user instead.
+  if (keyGenerator) {
+    options.keyGenerator = keyGenerator;
+  }
+
+  return rateLimit(options);
 }
 
 // Login and registration: 10 attempts per IP every 15 minutes.
@@ -36,4 +44,15 @@ const authLimiter = createLimiter({
   message: 'Too many authentication attempts. Please try again later.',
 });
 
-module.exports = { authLimiter };
+// Bookings: 5 per user every 15 minutes.
+// Counted per authenticated user (from the verified JWT), so one account
+// cannot flood the system with bookings and transaction records.
+// Must run after the authenticate middleware.
+const bookingLimiter = createLimiter({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  message: 'Too many booking requests. Please wait before making another booking.',
+  keyGenerator: (req) => `user:${req.user.id}`,
+});
+
+module.exports = { authLimiter, bookingLimiter };
