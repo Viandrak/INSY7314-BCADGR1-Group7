@@ -94,4 +94,21 @@ async function getMyBookings(req, res) {
   }
 }
 
-module.exports = { createBooking, getMyBookings };
+async function getReceivedBookings(req, res) {
+  try {
+    // The freelancer comes from the verified token, so users only see
+    // bookings made on their own gigs
+    const bookings = await Booking.find({ freelancer: req.user.id })
+      .populate('client', 'email') // Only the client's email is exposed
+      .sort({ createdAt: -1 });
+
+    return sendSuccess(res, 200, 'Bookings received retrieved successfully.', {
+      count: bookings.length,
+      bookings,
+    });
+  } catch (err) {
+    return sendError(res, 500, 'An unexpected error occurred while retrieving bookings received.');
+  }
+}
+
+module.exports = { createBooking, getMyBookings, getReceivedBookings };
