@@ -29,6 +29,12 @@ async function createBooking(req, res) {
       return sendError(res, 404, 'Gig not found.');
     }
 
+    // Prevent users booking their own gigs, which would create
+    // artificial transactions and inflate their recorded income.
+    if (gig.freelancer.toString() === req.user.id) {
+      return sendError(res, 403, 'You cannot book your own gig.');
+    }
+
     let booking;
     let transaction;
 
