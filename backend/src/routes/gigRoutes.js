@@ -5,6 +5,7 @@ const {
   getAllGigs,
   getMyGigs,
   getGigById,
+  updateGig,
 } = require('../controllers/gigController');
 
 const router = express.Router();
@@ -18,5 +19,8 @@ router.get('/', authenticate, getAllGigs);
 // "mine" as a gig ID and send the request to getGigById instead
 router.get('/mine', authenticate, getMyGigs);
 router.get('/:id', authenticate, getGigById);
+
+// Ownership is checked inside the controller
+router.patch('/:id', authenticate, updateGig);
 
 module.exports = router;

@@ -2,6 +2,7 @@ const Gig = require('../models/gigModel');
 const { sendSuccess, sendError } = require('../utils/responseHandler');
 
 const GIG_CATEGORIES = ['Design', 'Development', 'Writing', 'Marketing', 'Tutoring', 'Other'];
+const UPDATABLE_GIG_FIELDS = ['title', 'description', 'category', 'price', 'deliveryDays'];
 
 async function createGig(req, res) {
   // Only copy the fields a freelancer is allowed to set.
@@ -79,4 +80,42 @@ async function getGigById(req, res) {
   }
 }
 
-module.exports = { createGig, getAllGigs, getMyGigs, getGigById };
+async function updateGig(req, res) {
+  // Only allow changes to specific gig fields. Fields like "freelancer"
+  // are ignored, so ownership can never be transferred through an update.
+  const updates = {};
+  for (const field of UPDATABLE_GIG_FIELDS) {
+    if (req.body[field] !== undefined) {
+      updates[field] = req.body[field];
+    }
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return sendError(res, 400, 'No valid fields provided to update.');
+  }
+
+  try {
+    const gig = await Gig.findById(req.params.id);
+
+    if (!gig) {
+      return sendError(res, 404, 'Gig not found.');
+    }
+
+    // Ownership check: only the freelancer who created the gig may update it
+    if (gig.freelancer.toString() !== req.user.id) {
+      return sendError(res, 403, 'You can only update your own gigs.');
+    }
+
+    gig.set(updates);
+    await gig.save(); // save() runs the model's validation rules on the new values
+
+    return sendSuccess(res, 200, 'Gig updated successfully.', { gig });
+  } catch (err) {
+    if (err.name === 'ValidationError') {
+      return sendError(res, 400, 'Invalid gig details. Please check all fields and try again.');
+    }
+    return sendError(res, 500, 'An unexpected error occurred while updating the gig.');
+  }
+}
+
+module.exports = { createGig, getAllGigs, getMyGigs, getGigById, updateGig };
