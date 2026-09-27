@@ -54,6 +54,17 @@ async function getAllGigs(req, res) {
   }
 }
 
+async function getMyGigs(req, res) {
+  try {
+    // The owner comes from the verified token, so users only ever see their own gigs
+    const gigs = await Gig.find({ freelancer: req.user.id }).sort({ createdAt: -1 });
+
+    return sendSuccess(res, 200, 'Your gigs retrieved successfully.', { count: gigs.length, gigs });
+  } catch (err) {
+    return sendError(res, 500, 'An unexpected error occurred while retrieving your gigs.');
+  }
+}
+
 async function getGigById(req, res) {
   try {
     const gig = await Gig.findById(req.params.id).populate('freelancer', 'email');
@@ -68,4 +79,4 @@ async function getGigById(req, res) {
   }
 }
 
-module.exports = { createGig, getAllGigs, getGigById };
+module.exports = { createGig, getAllGigs, getMyGigs, getGigById };
