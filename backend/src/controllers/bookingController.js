@@ -1,6 +1,8 @@
 const crypto = require('crypto');
+const mongoose = require('mongoose');
 const Booking = require('../models/bookingModel');
 const Gig = require('../models/gigModel');
+const Transaction = require('../models/transactionModel');
 const { isValidObjectId } = require('../middleware/objectIdMiddleware');
 const { sendSuccess, sendError } = require('../utils/responseHandler');
 
@@ -27,17 +29,43 @@ async function createBooking(req, res) {
       return sendError(res, 404, 'Gig not found.');
     }
 
-    const booking = await Booking.create({
-      client: req.user.id,
-      freelancer: gig.freelancer,
-      gig: gig._id,
-      gigTitle: gig.title,
-      amount: gig.price,
-      reference: generateBookingReference(),
+    let booking;
+    let transaction;
+
+    // The booking and its transaction record are saved together in a single
+    // database transaction: either both are saved or neither is, so a booking
+    // can never exist without its financial record.
+    await mongoose.connection.transaction(async (session) => {
+      [booking] = await Booking.create(
+        [
+          {
+            client: req.user.id,
+            freelancer: gig.freelancer,
+            gig: gig._id,
+            gigTitle: gig.title,
+            amount: gig.price,
+            reference: generateBookingReference(),
+          },
+        ],
+        { session }
+      );
+
+      [transaction] = await Transaction.create(
+        [
+          {
+            booking: booking._id,
+            client: booking.client,
+            freelancer: booking.freelancer,
+            amount: booking.amount,
+          },
+        ],
+        { session }
+      );
     });
 
     return sendSuccess(res, 201, 'Booking confirmed. This is a simulated confirmation; no payment was processed.', {
       booking,
+      transaction,
     });
   } catch (err) {
     return sendError(res, 500, 'An unexpected error occurred while creating the booking.');
