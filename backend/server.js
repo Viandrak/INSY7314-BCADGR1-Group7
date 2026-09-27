@@ -5,6 +5,7 @@ const https = require('https');
 const authRoutes = require('./src/routes/authRoutes');
 const protectedRoutes = require('./src/routes/protectedRoutes');
 const gigRoutes = require('./src/routes/gigRoutes');
+const bookingRoutes = require('./src/routes/bookingRoutes');
 const { notFoundHandler, centralErrorHandler } = require('./src/middleware/errorHandler');
 const { connectDB } = require('./src/config/database');
 
@@ -28,6 +29,9 @@ app.use('/api/protected', protectedRoutes);
 
 // Gig routes
 app.use('/api/gigs', gigRoutes);
+
+// Booking routes
+app.use('/api/bookings', bookingRoutes);
 
 app.use(notFoundHandler);
 app.use(centralErrorHandler);
