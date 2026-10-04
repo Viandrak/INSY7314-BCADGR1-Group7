@@ -1,11 +1,10 @@
 const express = require('express');
 const { authenticate } = require('../middleware/authMiddleware');
+const { authorize } = require('../middleware/rbacMiddleware');
 const { getIncomeSummary } = require('../controllers/incomeController');
 
 const router = express.Router();
 
-// Income summary currently requires authentication.
-// Freelancer-only role enforcement will be added by P2's RBAC middleware.
-router.get('/summary', authenticate, getIncomeSummary);
+router.get('/summary', authenticate, authorize('freelancer'), getIncomeSummary);
 
 module.exports = router;
