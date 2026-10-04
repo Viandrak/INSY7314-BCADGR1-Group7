@@ -9,6 +9,7 @@ const bookingRoutes = require('./src/routes/bookingRoutes');
 const incomeRoutes = require('./src/routes/incomeRoutes');
 const { notFoundHandler, centralErrorHandler } = require('./src/middleware/errorHandler');
 const { connectDB } = require('./src/config/database');
+const adminRoutes = require('./src/routes/adminRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -36,6 +37,8 @@ app.use('/api/bookings', bookingRoutes);
 
 // Income routes
 app.use('/api/income', incomeRoutes);
+
+app.use('/api/admin', adminRoutes);
 
 app.use(notFoundHandler);
 app.use(centralErrorHandler);
