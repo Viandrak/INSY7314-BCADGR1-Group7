@@ -7,6 +7,7 @@ import BrowseGigsPage from './pages/BrowseGigsPage';
 import GigDetailPage from './pages/GigDetailPage';
 import ClientBookingsPage from './pages/ClientBookingsPage';
 import './App.css';
+import FreelancerDashboardPage from './pages/FreelancerDashboardPage';
 
 function HomePage() {
   return (
@@ -36,6 +37,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/dashboard"
+            element={
+             <ProtectedRoute allowedRoles={['freelancer']}>
+               <FreelancerDashboardPage />
+             </ProtectedRoute>
+            }
+         />
         </Routes>
       </main>
     </>
