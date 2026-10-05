@@ -22,7 +22,7 @@ function ClientBookingsPage() {
       {bookings.length === 0 && <p>You haven't booked any gigs yet.</p>}
       <div className="booking-list">
         {bookings.map((b) => (
-          <div key={b._id} className="booking-card">
+          <div key={b.id} className="booking-card">
             <h2>{b.gigTitle}</h2>
             <p>Freelancer: {b.freelancer?.email}</p>
             <p>Amount: R{b.amount}</p>

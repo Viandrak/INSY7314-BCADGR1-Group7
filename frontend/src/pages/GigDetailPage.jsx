@@ -60,7 +60,7 @@ function GigDetailPage() {
   }
 
   const canBook = isAuthenticated && user.role === 'client';
-  const isOwnGig = isAuthenticated && user.role === 'freelancer' && gig.freelancer?._id === user.id;
+  const isOwnGig = isAuthenticated && user.role === 'freelancer' && gig.freelancer?.id === user.id;
 
   return (
     <div>

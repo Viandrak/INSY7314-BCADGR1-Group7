@@ -48,13 +48,13 @@ function BrowseGigsPage() {
 
       <div className="gig-list">
         {gigs.map((gig) => (
-          <div key={gig._id} className="gig-card">
+          <div key={gig.id} className="gig-card">
             <h2>{gig.title}</h2>
             <p className="gig-category">{gig.category}</p>
             <p>{gig.description}</p>
             <p><strong>R{gig.price}</strong> · {gig.deliveryDays} day delivery</p>
             <p className="gig-freelancer">By {gig.freelancer?.email}</p>
-            <Link to={`/gigs/${gig._id}`}>View & Book</Link>
+            <Link to={`/gigs/${gig.id}`}>View & Book</Link>
           </div>
         ))}
       </div>
