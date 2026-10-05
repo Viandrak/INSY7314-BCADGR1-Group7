@@ -55,3 +55,33 @@
   color: #666;
   margin: 0;
 }
+
+.gig-list, .booking-list {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.gig-card, .booking-card {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+.gig-category {
+  display: inline-block;
+  background: #f0f0f0;
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.confirmation-screen dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 1rem;
+}
+
+.confirmation-screen dt {
+  font-weight: bold;
+}
