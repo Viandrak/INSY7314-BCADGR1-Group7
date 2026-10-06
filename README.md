@@ -85,9 +85,16 @@ Because the platform processes sensitive information — user credentials, trans
 
 ### Frontend
 
-> [!IMPORTANT]
-> **🛠️ P2 — to be completed**
-> List the React frontend features here: registration and login pages, browsing gigs, the booking flow, the client bookings page, the freelancer dashboard (my gigs, bookings received, income), the admin page, and how invalid input and errors are handled in the UI.
+### Frontend
+
+- Registration and login pages, with client-side validation and clear, non-technical error messages
+- Protected routes that redirect to login when signed out, and away from pages a user's role cannot access
+- Gig browsing with an optional category filter, and a gig detail page
+- A one-click booking flow with a simulated confirmation screen showing the booking reference and amount
+- A client bookings page showing booking history
+- A freelancer dashboard with three tabs: my gigs (create and delete), bookings received, and an income summary with the estimated tax figure
+- An admin page with tables for all users, all gigs and all bookings
+- Invalid input is caught before a request is sent (e.g. a gig price must be a positive number, a title must be at least 3 characters), and every API error is shown as a plain, user-facing message — raw server errors, stack traces and status codes are never displayed in the UI
 
 ---
 
@@ -260,15 +267,37 @@ Passwords are hashed with bcrypt (10 salt rounds) before being saved, and plaint
 
 On successful login, the backend issues a JWT containing only the user's ID and role, signed with a secret loaded from `.env`. Protected routes verify the token before any other processing, and login returns the same generic message for an unknown email or a wrong password, preventing user enumeration.
 
-> [!IMPORTANT]
-> **🛠️ P2 — to be completed**
-> Document the JWT hardening added in response to the Part 1 feedback: the signing algorithm, issuer and audience settings, and how they are verified.
+Following Part 1 feedback, the token is now signed and verified with three explicit settings rather than relying on defaults:
+
+- **Algorithm (`HS256`)** is pinned on both signing and verification. Without this, a forged token could specify a different or weaker algorithm (including `none`) and potentially bypass signature checking — explicitly pinning and checking the algorithm closes that gap.
+- **Issuer (`hustlehub-api`)** identifies this API as the token's source.
+- **Audience (`hustlehub-client`)** identifies the HustleHub+ frontend as the token's intended recipient.
+
+`jwt.verify()` is called with all three constraints, so a token that is correctly signed but has the wrong algorithm, issuer or audience is rejected before its payload is ever trusted — not just a malformed or expired token.
 
 ### Role-based access control
 
-> [!IMPORTANT]
-> **🛠️ P2 — to be completed**
-> Document the RBAC middleware and how it is applied to routes, and include a table showing which roles can access each endpoint.
+### Role-based access control
+
+An `authorize(...allowedRoles)` middleware runs after `authenticate` on every protected route. It reads the role from the verified JWT payload (never from the request body, which the client could tamper with) and rejects the request with `403` if that role is not in the route's allowed list. Because it runs immediately after authentication and before any booking-rate-limiting or controller logic, an unauthorised role is rejected as early as possible in the request lifecycle.
+
+| Endpoint | Client | Freelancer | Admin |
+|----------|:------:|:----------:|:-----:|
+| `POST /api/gigs` | ❌ | ✅ | ❌ |
+| `GET /api/gigs` | ✅ | ✅ | ✅ |
+| `GET /api/gigs/mine` | ❌ | ✅ | ❌ |
+| `GET /api/gigs/:id` | ✅ | ✅ | ✅ |
+| `PATCH /api/gigs/:id` | ❌ | ✅ (own gigs only) | ❌ |
+| `DELETE /api/gigs/:id` | ❌ | ✅ (own gigs only) | ❌ |
+| `POST /api/bookings` | ✅ | ❌ | ❌ |
+| `GET /api/bookings/mine` | ✅ | ❌ | ❌ |
+| `GET /api/bookings/received` | ❌ | ✅ | ❌ |
+| `GET /api/income/summary` | ❌ | ✅ | ❌ |
+| `GET /api/admin/users` | ❌ | ❌ | ✅ |
+| `GET /api/admin/gigs` | ❌ | ❌ | ✅ |
+| `GET /api/admin/bookings` | ❌ | ❌ | ✅ |
+
+RBAC controls which *role* can call an endpoint at all; the ownership checks described below separately control which *specific records* a freelancer can modify once they're past the role check.
 
 ### Resource ownership and data access
 
@@ -376,9 +405,13 @@ All endpoints are served from `https://localhost:5000`. Protected endpoints requ
 |:------:|----------|--------|-------------|
 | ![GET](https://img.shields.io/badge/GET-22C55E?style=flat-square) | `/api/income/summary` | JWT | Total income, transaction count and estimated tax |
 
-> [!IMPORTANT]
-> **🛠️ P2 — to be completed**
-> Add the admin endpoints, and add the required role for each endpoint to the tables above.
+### 🛠️ Admin
+
+| Method | Endpoint | Access | Description |
+|:------:|----------|--------|-------------|
+| ![GET](https://img.shields.io/badge/GET-22C55E?style=flat-square) | `/api/admin/users` | JWT · admin only | View all registered users |
+| ![GET](https://img.shields.io/badge/GET-22C55E?style=flat-square) | `/api/admin/gigs` | JWT · admin only | View all gigs on the platform |
+| ![GET](https://img.shields.io/badge/GET-22C55E?style=flat-square) | `/api/admin/bookings` | JWT · admin only | View all bookings on the platform |
 
 <details>
 <summary><b>📦 Example request bodies</b></summary>
@@ -518,10 +551,26 @@ The seed also creates 6 gigs across different categories, and 3 bookings, each w
 
 ### Frontend
 
-> [!IMPORTANT]
-> **🛠️ P2 — to be completed**
-> Add the steps to install and run the React frontend, any frontend environment variables, and the URL it runs on.
+**1. Install dependencies**
 
+cd frontend
+npm install
+
+
+**2. Configure environment variables**
+
+cp .env.example .env
+
+
+| Variable | Description |
+|----------|-------------|
+| `VITE_API_URL` | Base URL of the backend API. Defaults to `https://localhost:5000/api` |
+
+**3. Start the frontend**
+
+npm run dev
+
+The app runs at `http://localhost:5173`. The backend must be running at the same time (see above) — the frontend makes requests to it directly, so both servers need to be up together during development.
 ---
 
 <a id="testing"></a>
@@ -535,9 +584,23 @@ The seed also creates 6 gigs across different categories, and 3 bookings, each w
 
 ### Frontend testing
 
-> [!IMPORTANT]
-> **🛠️ P2 — to be completed**
-> Document the frontend testing framework, what the tests cover, and how to run them.
+Frontend tests use **Vitest** with **React Testing Library**, which renders components in a simulated browser (jsdom) and queries them the way a person would — by label, role and visible text — rather than by implementation detail. The API client is mocked in every test, so tests run without a live backend or database and never make real network calls.
+
+Run the test suite:
+
+cd frontend
+npm test
+
+
+Coverage includes:
+
+- **Rendering** — `GigForm`, `LoginPage`, `RegisterPage` and `Navbar` all have tests confirming the expected fields, labels and buttons are present
+- **User interaction** — typing into fields, selecting a role, and submitting a form are simulated with `@testing-library/user-event` and checked against the resulting API call
+- **Invalid input** — `GigForm` is tested with an empty title and a non-positive price, confirming the form shows an inline error and does not call `onSubmit`
+- **API error handling** — `LoginPage` and `RegisterPage` are tested with a mocked failed request (invalid credentials, duplicate email), confirming the page shows a clear, user-facing message rather than a raw error
+- **Role-based rendering** — `Navbar` is tested for three states (logged out, logged in as freelancer, logged in as admin), confirming each shows only the links that role should see
+
+One test (`GigForm`'s non-positive price check) initially failed because the price input's native `min="1"` HTML attribute caused the browser to block submission before the component's own validation logic ever ran — bypassing the custom error message. The fix was adding `noValidate` to the form so all validation goes through one consistent path; this is a concrete example of a frontend test catching a real inconsistency in error handling.
 
 ---
 

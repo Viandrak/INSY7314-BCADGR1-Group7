@@ -49,7 +49,7 @@ function GigForm({ initialValues, onSubmit, submitLabel = 'Save' }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="gig-form">
+    <form onSubmit={handleSubmit} className="gig-form" noValidate>
       <label htmlFor="title">Title</label>
       <input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required />
 
