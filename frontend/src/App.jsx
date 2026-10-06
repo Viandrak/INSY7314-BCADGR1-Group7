@@ -8,6 +8,7 @@ import GigDetailPage from './pages/GigDetailPage';
 import ClientBookingsPage from './pages/ClientBookingsPage';
 import './App.css';
 import FreelancerDashboardPage from './pages/FreelancerDashboardPage';
+import AdminPage from './pages/AdminPage';
 
 function HomePage() {
   return (
@@ -45,6 +46,14 @@ function App() {
              </ProtectedRoute>
             }
          />
+         <Route
+           path="/admin"
+           element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminPage />
+           </ProtectedRoute>
+          }       
+        />
         </Routes>
       </main>
     </>
