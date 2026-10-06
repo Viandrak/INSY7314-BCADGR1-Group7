@@ -85,8 +85,6 @@ Because the platform processes sensitive information — user credentials, trans
 
 ### Frontend
 
-### Frontend
-
 - Registration and login pages, with client-side validation and clear, non-technical error messages
 - Protected routes that redirect to login when signed out, and away from pages a user's role cannot access
 - Gig browsing with an optional category filter, and a gig detail page
@@ -274,8 +272,6 @@ Following Part 1 feedback, the token is now signed and verified with three expli
 - **Audience (`hustlehub-client`)** identifies the HustleHub+ frontend as the token's intended recipient.
 
 `jwt.verify()` is called with all three constraints, so a token that is correctly signed but has the wrong algorithm, issuer or audience is rejected before its payload is ever trusted — not just a malformed or expired token.
-
-### Role-based access control
 
 ### Role-based access control
 
@@ -553,13 +549,19 @@ The seed also creates 6 gigs across different categories, and 3 bookings, each w
 
 **1. Install dependencies**
 
+```
 cd frontend
+```
+```
 npm install
+```
 
 
 **2. Configure environment variables**
 
+```
 cp .env.example .env
+```
 
 
 | Variable | Description |
@@ -568,7 +570,9 @@ cp .env.example .env
 
 **3. Start the frontend**
 
+```
 npm run dev
+```
 
 The app runs at `http://localhost:5173`. The backend must be running at the same time (see above) — the frontend makes requests to it directly, so both servers need to be up together during development.
 ---
@@ -588,8 +592,12 @@ Frontend tests use **Vitest** with **React Testing Library**, which renders comp
 
 Run the test suite:
 
+```
 cd frontend
+```
+```
 npm test
+```
 
 
 Coverage includes:
