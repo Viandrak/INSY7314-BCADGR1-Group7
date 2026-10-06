@@ -62,25 +62,27 @@ function GigDetailPage() {
   const canBook = isAuthenticated && user.role === 'client';
   const isOwnGig = isAuthenticated && user.role === 'freelancer' && gig.freelancer?.id === user.id;
 
-  return (
+    return (
     <div>
-      <h1>{gig.title}</h1>
-      <p className="gig-category">{gig.category}</p>
-      <p>{gig.description}</p>
-      <p><strong>R{gig.price}</strong> · {gig.deliveryDays} day delivery</p>
-      <p className="gig-freelancer">By {gig.freelancer?.email}</p>
+      <div className="gig-detail-card">
+        <h1>{gig.title}</h1>
+        <p className="gig-category">{gig.category}</p>
+        <p className="gig-detail-description">{gig.description}</p>
+        <p className="gig-detail-price"><strong>R{gig.price}</strong> · {gig.deliveryDays} day delivery</p>
+        <p className="gig-freelancer">By {gig.freelancer?.email}</p>
 
-      {error && <p className="error-message" role="alert">{error}</p>}
+        {error && <p className="error-message" role="alert">{error}</p>}
 
-      {!isAuthenticated && <p>Please <a href="/login">log in</a> as a client to book this gig.</p>}
-      {isAuthenticated && !canBook && !isOwnGig && <p>Only client accounts can book gigs.</p>}
-      {isOwnGig && <p>This is your own gig listing.</p>}
+        {!isAuthenticated && <p>Please <a href="/login">log in</a> as a client to book this gig.</p>}
+        {isAuthenticated && !canBook && !isOwnGig && <p>Only client accounts can book gigs.</p>}
+        {isOwnGig && <p>This is your own gig listing.</p>}
 
-      {canBook && (
-        <button onClick={handleBook} disabled={booking}>
-          {booking ? 'Booking...' : 'Book Now'}
-        </button>
-      )}
+        {canBook && (
+          <button onClick={handleBook} disabled={booking}>
+            {booking ? 'Booking...' : 'Book Now'}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

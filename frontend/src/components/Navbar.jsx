@@ -12,7 +12,7 @@ function Navbar() {
 
   return (
     <nav className="navbar">
-      <Link to="/" className="brand">HustleHub+</Link>
+      <Link to="/" className="brand">HustleHub<span className="accent">+</span></Link>
       <div className="nav-links">
         <Link to="/gigs">Browse Gigs</Link>
         {isAuthenticated && user.role === 'client' && <Link to="/bookings">My Bookings</Link>}
@@ -21,7 +21,7 @@ function Navbar() {
         {isAuthenticated ? (
           <>
             <span className="user-email">{user.email}</span>
-            <button onClick={handleLogout}>Log out</button>
+            <button onClick={handleLogout} className="secondary">Log out</button>
           </>
         ) : (
           <>

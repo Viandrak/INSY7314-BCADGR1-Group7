@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Link } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
@@ -12,9 +12,13 @@ import AdminPage from './pages/AdminPage';
 
 function HomePage() {
   return (
-    <div>
-      <h1>Welcome to HustleHub+</h1>
+    <div className="hero">
+      <h1>Find the right <span className="accent">freelancer</span> for your project</h1>
       <p>Browse gigs, book freelancers, and track your income — all in one place.</p>
+      <div className="hero-actions">
+        <Link to="/gigs"><button>Browse Gigs</button></Link>
+        <Link to="/register"><button className="secondary">Get Started</button></Link>
+      </div>
     </div>
   );
 }

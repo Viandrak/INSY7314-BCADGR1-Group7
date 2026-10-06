@@ -60,8 +60,8 @@ function FreelancerDashboardPage() {
 
       {tab === 'gigs' && (
         <div>
-          <button onClick={() => setShowForm((v) => !v)}>
-            {showForm ? 'Cancel' : 'Create New Gig'}
+          <button onClick={() => setShowForm((v) => !v)} className={showForm ? 'secondary' : ''}>
+           {showForm ? 'Cancel' : 'Create New Gig'}
           </button>
           {showForm && <GigForm onSubmit={handleCreateGig} submitLabel="Create Gig" />}
 
@@ -72,7 +72,7 @@ function FreelancerDashboardPage() {
                 <h2>{gig.title}</h2>
                 <p className="gig-category">{gig.category}</p>
                 <p>R{gig.price} · {gig.deliveryDays} day delivery</p>
-                <button onClick={() => handleDeleteGig(gig.id)}>Delete</button>
+                <button onClick={() => handleDeleteGig(gig.id)} className="secondary">Delete</button>
               </div>
             ))}
           </div>
