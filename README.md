@@ -654,12 +654,12 @@ The `429` limits are tested in the two standalone collections. The rate limiters
 
 ```
 npm install -g newman newman-reporter-htmlextra
-newman run postman/HustleHub-Part2.postman_collection.json --insecure --env-var "seedPassword=<your SEED_PASSWORD>" -r cli,htmlextra --reporter-htmlextra-export newman-reports/main.html
-newman run postman/HustleHub-Part2-LoginRateLimit.postman_collection.json --insecure -r cli,htmlextra --reporter-htmlextra-export newman-reports/login-ratelimit.html
-newman run postman/HustleHub-Part2-BookingRateLimit.postman_collection.json --insecure --env-var "seedPassword=<your SEED_PASSWORD>" -r cli,htmlextra --reporter-htmlextra-export newman-reports/booking-ratelimit.html
+newman run postman/HustleHub-Part2.postman_collection.json --insecure --env-var "seedPassword=<your SEED_PASSWORD>" -r cli,htmlextra --reporter-htmlextra-export newman-reports/main.html --reporter-htmlextra-skipSensitiveData
+newman run postman/HustleHub-Part2-LoginRateLimit.postman_collection.json --insecure -r cli,htmlextra --reporter-htmlextra-export newman-reports/login-ratelimit.html --reporter-htmlextra-skipSensitiveData
+newman run postman/HustleHub-Part2-BookingRateLimit.postman_collection.json --insecure --env-var "seedPassword=<your SEED_PASSWORD>" -r cli,htmlextra --reporter-htmlextra-export newman-reports/booking-ratelimit.html --reporter-htmlextra-skipSensitiveData
 ```
 
-`--insecure` is needed because the local HTTPS certificate is not trusted by Newman. The password is passed on the command line so it is never stored in a collection. The HTML reports from all three runs are saved in `newman-reports/`.
+`--insecure` is needed because the local HTTPS certificate is not trusted by Newman. The password is passed on the command line so it is never stored in a collection, and `--reporter-htmlextra-skipSensitiveData` keeps passwords and tokens out of the saved reports. The HTML reports from all three runs are saved in `newman-reports/`.
 
 ### Frontend testing
 
