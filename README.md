@@ -654,6 +654,13 @@ OWASP Foundation, 2026a. *Authorization Cheat Sheet*. [Online] Available at: htt
 
 OWASP Foundation, 2026b. *Mass Assignment Cheat Sheet*. [Online] Available at: https://cheatsheetseries.owasp.org/cheatsheets/Mass_Assignment_Cheat_Sheet.html [Accessed 27 September 2026].
 
+GeeksforGeeks, 2020. *Node.Js securing apps with helmet.Js*. GeeksforGeeks. [Online]  Available at: https://www.geeksforgeeks.org/node-js/node-js-securing-apps-with-helmet-js/ [Accessed 8 Oct. 2026].
+ 
+GeeksforGeeks, 2024. *What is the purpose of the expressvalidator middleware in express JS?*. GeeksforGeeks. [Online] Available at: https://www.geeksforgeeks.org/node-js/what-is-the-purpose-of-the-express-validator-middleware-in-express-js/ [Accessed 11 Oct. 2026]. 
+
+GeeksforGeeks, 2024. *How to use Newman with postman?*. GeeksforGeeks. [Online]  Available at: https://www.geeksforgeeks.org/node-js/how-to-use-newman-with-postman/ [Accessed 11 Oct. 2026].
+ 
+
 
 
 
