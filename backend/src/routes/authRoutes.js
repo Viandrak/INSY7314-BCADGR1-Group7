@@ -5,13 +5,26 @@ const {
   loginValidationRules,
   handleValidationErrors,
 } = require('../middleware/validationMiddleware');
+const { allowFields } = require('../middleware/allowlistMiddleware');
 const { authLimiter } = require('../middleware/rateLimitMiddleware');
 
 const router = express.Router();
 
-// The rate limiter runs first, so blocked requests are rejected
-// before any validation, database lookup or password hashing happens.
-router.post('/register', authLimiter, registerValidationRules, handleValidationErrors, register);
-router.post('/login', authLimiter, loginValidationRules, handleValidationErrors, login);
+router.post(
+  '/register',
+  authLimiter,
+  allowFields(['email', 'password', 'role']),
+  registerValidationRules,
+  handleValidationErrors,
+  register
+);
+router.post(
+  '/login',
+  authLimiter,
+  allowFields(['email', 'password']),
+  loginValidationRules,
+  handleValidationErrors,
+  login
+);
 
 module.exports = router;
