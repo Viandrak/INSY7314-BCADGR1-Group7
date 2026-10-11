@@ -145,8 +145,8 @@ All security-relevant logic sits inside the backend's **trust boundary**, before
 | JWT algorithm, issuer and audience validation *(Part 1 feedback)* | Part 2 |
 | Role-based access control (RBAC) | Part 2 |
 | Rejection of unexpected request fields *(Part 1 feedback)* | Part 2 |
-| Validation and sanitisation on all endpoints (NoSQL injection and XSS) | Part 2 |
-| Security headers with Helmet and Content Security Policy | Part 2 |
+| Input validation on every endpoint that accepts a body, and sanitisation of every request (NoSQL injection and XSS) | Part 2 |
+| Security headers on API responses with Helmet and Content Security Policy | Part 2 |
 
 ---
 
@@ -160,7 +160,7 @@ All security-relevant logic sits inside the backend's **trust boundary**, before
 | `src/controllers` | Handles request and response logic, including ownership checks |
 | `src/models` | Mongoose schemas for users, gigs, bookings and transactions |
 | `src/services` | Reusable logic such as password hashing and JWT handling |
-| `src/middleware` | Authentication, authorisation, validation, ID format checks, rate limiting and error handling |
+| `src/middleware` | Authentication, authorisation, allowlist, sanitisation, validation, ID format checks, rate limiting and error handling |
 | `src/utils` | Shared helpers, including the consistent `{ success, message }` response format |
 | `scripts` | Development scripts, including the demo data seed script |
 
@@ -190,9 +190,8 @@ flowchart LR
 7. **Model** — Mongoose applies schema rules before anything is saved
 8. **Response** — a consistent `{ success, message, ... }` JSON response is returned
 
-> [!IMPORTANT]
-> **🛠️ P2 / P3 — to be completed**
-> Confirm that the diagram and steps above match the order your RBAC (P2) and validation and sanitisation (P3) middleware actually run in, and adjust them if needed.
+> [!NOTE]
+> The diagram shows the general order. Two details differ slightly in the code. Sanitisation runs first on every request, before any route. The rate limiter's position depends on the route: login and register apply their IP-based limiter first, while booking applies its per-user limiter after authentication and the role check, because it counts requests by user ID from the verified token.
 
 ---
 
@@ -345,17 +344,61 @@ Rate limiting is applied with `express-rate-limit` (express-rate-limit, 2026):
 
 ### Input validation and sanitisation
 
-Registration and login input is validated with `express-validator`: emails are trimmed and normalised, passwords must be at least 8 characters with an uppercase letter, a lowercase letter and a number, and the role is restricted to `client` or `freelancer`. Request bodies are capped at 10 kB.
+Input is handled in three layers. The first runs on every request. The other two run on each route that accepts a request body.
 
-> [!IMPORTANT]
-> **🛠️ P3 — to be completed**
-> Document the validation schemas for all endpoints, the allowlist that rejects unexpected fields (Part 1 feedback), and the NoSQL injection and XSS sanitisation.
+**1. Sanitisation (every request, before routing).** The `sanitizeInput` middleware cleans the request body and query string:
+
+- Any key that starts with `$` or contains `.` is dropped. This removes MongoDB operators such as `$gt` and `$ne` (NoSQL injection).
+- The characters `$`, `<` and `>` are removed from all text values, so HTML tags cannot be stored as markup (cross-site scripting). For example, `<script>alert('xss')</script>` is stored as the harmless text `scriptalert('xss')/script`. React also escapes values when it displays them.
+- Passwords are left exactly as typed, because they are hashed and never displayed.
+
+For example, `{ "email": { "$gt": "" } }` loses its `$gt` operator, and the empty object that remains fails the `isString()` check with `400`.
+
+**2. Allowlist (per route).** The `allowFields` middleware rejects a request with `400` if its body contains a field that is not on the route's allowed list. This fixes the Part 1 feedback and also blocks mass assignment, such as a client sending `role` or an `amount`.
+
+| Endpoint | Allowed fields |
+|----------|----------------|
+| `POST /api/auth/register` | `email`, `password`, `role` |
+| `POST /api/auth/login` | `email`, `password` |
+| `POST /api/gigs` and `PATCH /api/gigs/:id` | `title`, `description`, `category`, `price`, `deliveryDays` |
+| `POST /api/bookings` | `gigId` |
+
+**3. Validation (per route).** `express-validator` (GeeksforGeeks, 2024a) checks the type, length and range of every field and returns `400` with the first error message.
+
+| Field | Rule |
+|-------|------|
+| `email` | Text, valid email format, normalised |
+| `password` (register) | At least 8 characters, with an uppercase letter, a lowercase letter and a number |
+| `role` | Must be `client` or `freelancer`, so an admin cannot self-register |
+| `title` | Text, 3 to 100 characters |
+| `description` | Text, 10 to 2000 characters |
+| `category` | Must be one of the six allowed categories |
+| `price` | Number from 1 to 1,000,000 |
+| `deliveryDays` | Whole number from 1 to 365 |
+| `gigId` | Text, exactly 24 characters, then checked against the database |
+
+Update requests may be partial, so each gig field is only checked if it is present. IDs in URLs must be 24 hexadecimal characters, the gig `category` filter only accepts values from the allowed list, and request bodies are capped at 10 kB. Endpoints that take no body (`GET` and `DELETE`) are protected by authentication, role checks and these URL checks.
 
 ### Security headers and Content Security Policy
 
-> [!IMPORTANT]
-> **🛠️ P3 — to be completed**
-> Document the Helmet configuration, the Content Security Policy directives and why each one was chosen, and the CORS configuration.
+Helmet sets security headers on every API response, including a `Content-Security-Policy`, `X-Content-Type-Options: nosniff` and `Strict-Transport-Security`, and removes the `X-Powered-By` header that reveals the server software. The API only returns JSON, so the policy is kept strict:
+
+| Directive | Value | Why |
+|-----------|-------|-----|
+| `default-src` | `'self'` | Anything not listed below may only load from the API's own origin |
+| `script-src` | `'self'` | No inline or third-party scripts |
+| `style-src` | `'self'` | No inline or third-party styles |
+| `img-src` | `'self'` and `data:` | Images only from the API's own origin or embedded data |
+| `connect-src` | `'self'` | Connections only to the API's own origin |
+| `object-src` | `'none'` | Blocks plug-ins such as Flash |
+| `frame-ancestors` | `'none'` | The API cannot be embedded in a frame, which prevents clickjacking |
+
+`Cross-Origin-Resource-Policy` is set to `cross-origin` so the React app, which runs on a different origin, can read API responses.
+
+**CORS** only allows the origin in `FRONTEND_URL` (default `http://localhost:5173`), and the Postman collection checks this.
+
+> [!NOTE]
+> The policy is sent with API responses. The React pages are served by the Vite development server, which does not send a Content Security Policy in this part.
 
 ### Error handling
 
@@ -575,6 +618,7 @@ npm run dev
 ```
 
 The app runs at `http://localhost:5173`. The backend must be running at the same time (see above) — the frontend makes requests to it directly, so both servers need to be up together during development.
+
 ---
 
 <a id="testing"></a>
@@ -582,9 +626,40 @@ The app runs at `http://localhost:5173`. The backend must be running at the same
 
 ### Backend testing (Postman and Newman)
 
-> [!IMPORTANT]
-> **🛠️ P3 — to be completed**
-> Document the Postman collection structure, the success and failure cases covered, how to run the collection with Newman, and where the Newman execution report is saved.
+The backend is tested with three Postman collections in `postman/`. They are generated by `postman/build-collections.js` (`node postman/build-collections.js`).
+
+| Collection | Requests | Assertions | Failed |
+|------------|:--------:|:----------:|:------:|
+| `HustleHub-Part2` (main) | 72 | 92 | 0 |
+| `HustleHub-Part2-LoginRateLimit` | 11 | 13 | 0 |
+| `HustleHub-Part2-BookingRateLimit` | 9 | 10 | 0 |
+
+The main collection has six folders: Auth (19), Gigs (23), Bookings (12), Income (4), RBAC & Admin (11) and Security Headers (3). Each feature has success and failure cases:
+
+- missing, invalid and out-of-range input
+- unexpected fields rejected by the allowlist
+- NoSQL injection attempts (objects where text is expected)
+- XSS attempts (a script tag in an email is rejected, and one in a gig description is neutralised before it is stored)
+- `401` for a missing or invalid token
+- `403` for the wrong role or for modifying another user's gig
+- security headers present, `X-Powered-By` absent, and the CORS origin restricted
+
+The `429` limits are tested in the two standalone collections. The rate limiters count requests in memory, so restart the backend before running each one.
+
+**How to run**
+
+1. Import the three collections into Postman. Turn off SSL certificate verification in Postman's settings, and set the `seedPassword` collection variable to your `SEED_PASSWORD`.
+2. For the main collection, add `AUTH_RATE_LIMIT=1000` and `BOOKING_RATE_LIMIT=1000` to `backend/.env` and restart the backend, so the 72 requests are not blocked. The defaults are 10 authentication requests and 5 bookings per 15 minutes. These lines are for testing only: remove or comment them out for the rate-limit collections and for normal use.
+3. Run the collections with Newman (GeeksforGeeks, 2024b) from the repository root:
+
+```
+npm install -g newman newman-reporter-htmlextra
+newman run postman/HustleHub-Part2.postman_collection.json --insecure --env-var "seedPassword=<your SEED_PASSWORD>" -r cli,htmlextra --reporter-htmlextra-export newman-reports/main.html
+newman run postman/HustleHub-Part2-LoginRateLimit.postman_collection.json --insecure -r cli,htmlextra --reporter-htmlextra-export newman-reports/login-ratelimit.html
+newman run postman/HustleHub-Part2-BookingRateLimit.postman_collection.json --insecure --env-var "seedPassword=<your SEED_PASSWORD>" -r cli,htmlextra --reporter-htmlextra-export newman-reports/booking-ratelimit.html
+```
+
+`--insecure` is needed because the local HTTPS certificate is not trusted by Newman. The password is passed on the command line so it is never stored in a collection. The HTML reports from all three runs are saved in `newman-reports/`.
 
 ### Frontend testing
 
