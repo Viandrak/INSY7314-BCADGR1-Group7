@@ -1,0 +1,315 @@
+{
+  "info": {
+    "name": "HustleHub+ Part 2 - Login Rate Limit (standalone)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Standalone: tests the login/register rate limit. Restart the server before running this on its own."
+  },
+  "item": [
+    {
+      "name": "Attempt 1 - Login with wrong password",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Attempt 1 returns 401 (wrong password, not yet limited)', () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"freelancer1@hustlehub.com\",\"password\":\"WrongPassword1\"}"
+        }
+      }
+    },
+    {
+      "name": "Attempt 2 - Login with wrong password",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Attempt 2 returns 401 (wrong password, not yet limited)', () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"freelancer1@hustlehub.com\",\"password\":\"WrongPassword1\"}"
+        }
+      }
+    },
+    {
+      "name": "Attempt 3 - Login with wrong password",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Attempt 3 returns 401 (wrong password, not yet limited)', () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"freelancer1@hustlehub.com\",\"password\":\"WrongPassword1\"}"
+        }
+      }
+    },
+    {
+      "name": "Attempt 4 - Login with wrong password",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Attempt 4 returns 401 (wrong password, not yet limited)', () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"freelancer1@hustlehub.com\",\"password\":\"WrongPassword1\"}"
+        }
+      }
+    },
+    {
+      "name": "Attempt 5 - Login with wrong password",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Attempt 5 returns 401 (wrong password, not yet limited)', () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"freelancer1@hustlehub.com\",\"password\":\"WrongPassword1\"}"
+        }
+      }
+    },
+    {
+      "name": "Attempt 6 - Login with wrong password",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Attempt 6 returns 401 (wrong password, not yet limited)', () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"freelancer1@hustlehub.com\",\"password\":\"WrongPassword1\"}"
+        }
+      }
+    },
+    {
+      "name": "Attempt 7 - Login with wrong password",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Attempt 7 returns 401 (wrong password, not yet limited)', () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"freelancer1@hustlehub.com\",\"password\":\"WrongPassword1\"}"
+        }
+      }
+    },
+    {
+      "name": "Attempt 8 - Login with wrong password",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Attempt 8 returns 401 (wrong password, not yet limited)', () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"freelancer1@hustlehub.com\",\"password\":\"WrongPassword1\"}"
+        }
+      }
+    },
+    {
+      "name": "Attempt 9 - Login with wrong password",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Attempt 9 returns 401 (wrong password, not yet limited)', () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"freelancer1@hustlehub.com\",\"password\":\"WrongPassword1\"}"
+        }
+      }
+    },
+    {
+      "name": "Attempt 10 - Login with wrong password",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Attempt 10 returns 401 (wrong password, not yet limited)', () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"freelancer1@hustlehub.com\",\"password\":\"WrongPassword1\"}"
+        }
+      }
+    },
+    {
+      "name": "Attempt 11 - Login with wrong password",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('11th attempt is rate limited (429)', () => pm.response.to.have.status(429));",
+              "pm.test('Retry-After header present', () => pm.expect(pm.response.headers.has('Retry-After')).to.be.true);",
+              "const json = pm.response.json();",
+              "pm.test('Rate limit message returned', () => pm.expect(json.message).to.include('Too many'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"freelancer1@hustlehub.com\",\"password\":\"WrongPassword1\"}"
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://localhost:5000"
+    }
+  ]
+}
