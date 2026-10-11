@@ -15,7 +15,7 @@ function createLimiter({ windowMs, limit, message, keyGenerator }) {
     windowMs,
     limit,
     standardHeaders: 'draft-7', // Sends RateLimit headers so clients can see their remaining requests
-    legacyHeaders: false,       // Disables the older X-RateLimit-* headers
+    legacyHeaders: false,       
     handler: (req, res) => {
       const retryAfterSeconds = secondsUntilReset(req, windowMs);
       res.set('Retry-After', String(retryAfterSeconds));
@@ -40,7 +40,7 @@ function createLimiter({ windowMs, limit, message, keyGenerator }) {
 // Limits brute-force password guessing and mass account creation.
 const authLimiter = createLimiter({
   windowMs: 15 * 60 * 1000,
-  limit: 10,
+    limit: Number(process.env.AUTH_RATE_LIMIT) || 10,
   message: 'Too many authentication attempts. Please try again later.',
 });
 
@@ -50,7 +50,7 @@ const authLimiter = createLimiter({
 // Must run after the authenticate middleware.
 const bookingLimiter = createLimiter({
   windowMs: 15 * 60 * 1000,
-  limit: 5,
+    limit: Number(process.env.BOOKING_RATE_LIMIT) || 5,
   message: 'Too many booking requests. Please wait before making another booking.',
   keyGenerator: (req) => `user:${req.user.id}`,
 });
