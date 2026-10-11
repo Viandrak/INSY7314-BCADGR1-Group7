@@ -1,0 +1,309 @@
+{
+  "info": {
+    "name": "HustleHub+ Part 2 - Booking Rate Limit (standalone)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Standalone: tests the booking rate limit. Restart the server before running this on its own."
+  },
+  "item": [
+    {
+      "name": "Setup 1 - Login as freelancer1 (capture token)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "if (json.token) pm.collectionVariables.set('freelancerToken', json.token);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"freelancer1@hustlehub.com\",\"password\":\"{{seedPassword}}\"}"
+        }
+      }
+    },
+    {
+      "name": "Setup 2 - Create a gig to book against",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "const json = pm.response.json();",
+              "if (json.gig && json.gig.id) pm.collectionVariables.set('gigId', json.gig.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{freelancerToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/gigs",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\":\"Rate Limit Test Gig\",\"description\":\"Used only to test the booking rate limiter.\",\"category\":\"Other\",\"price\":50,\"deliveryDays\":1}"
+        }
+      }
+    },
+    {
+      "name": "Setup 3 - Login as client2 (fresh user, 0 prior bookings)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "if (json.token) pm.collectionVariables.set('client2Token', json.token);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"client2@hustlehub.com\",\"password\":\"{{seedPassword}}\"}"
+        }
+      }
+    },
+    {
+      "name": "Attempt 1 - Create booking as client2",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Booking attempt 1 succeeds (201)', () => pm.response.to.have.status(201));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{client2Token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/bookings",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"gigId\":\"{{gigId}}\"}"
+        }
+      }
+    },
+    {
+      "name": "Attempt 2 - Create booking as client2",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Booking attempt 2 succeeds (201)', () => pm.response.to.have.status(201));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{client2Token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/bookings",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"gigId\":\"{{gigId}}\"}"
+        }
+      }
+    },
+    {
+      "name": "Attempt 3 - Create booking as client2",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Booking attempt 3 succeeds (201)', () => pm.response.to.have.status(201));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{client2Token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/bookings",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"gigId\":\"{{gigId}}\"}"
+        }
+      }
+    },
+    {
+      "name": "Attempt 4 - Create booking as client2",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Booking attempt 4 succeeds (201)', () => pm.response.to.have.status(201));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{client2Token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/bookings",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"gigId\":\"{{gigId}}\"}"
+        }
+      }
+    },
+    {
+      "name": "Attempt 5 - Create booking as client2",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Booking attempt 5 succeeds (201)', () => pm.response.to.have.status(201));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{client2Token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/bookings",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"gigId\":\"{{gigId}}\"}"
+        }
+      }
+    },
+    {
+      "name": "Attempt 6 - Create booking as client2",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('6th booking attempt is rate limited (429)', () => pm.response.to.have.status(429));",
+              "pm.test('Retry-After header present', () => pm.expect(pm.response.headers.has('Retry-After')).to.be.true);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{client2Token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/bookings",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"gigId\":\"{{gigId}}\"}"
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://localhost:5000"
+    },
+    {
+      "key": "seedPassword",
+      "value": ""
+    },
+    {
+      "key": "freelancerToken",
+      "value": ""
+    },
+    {
+      "key": "client2Token",
+      "value": ""
+    },
+    {
+      "key": "gigId",
+      "value": ""
+    }
+  ]
+}
