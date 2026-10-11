@@ -690,7 +690,6 @@ One test (`GigForm`'s non-positive price check) initially failed because the pri
 <a id="screenshots"></a>
 ## 📸 Screenshots
 These screenshots show the test results and the main user flows. The result of every request is recorded in the Newman reports in `newman-reports/`, so only key examples are shown here.
-
 ### 🧪 Newman test results
 
 Newman ran all three Postman collections from the command line with no failures.
@@ -699,22 +698,19 @@ Newman ran all three Postman collections from the command line with no failures.
 
 All requests for authentication, gigs, bookings, income, admin access and security headers passed.
 
-<img width="797" height="807" alt="Newman main collection report" src="https://github.com/user-attachments/assets/934c6d38-4f34-4ac4-86cf-08f5e71053c6" />
-<br>
+[View screenshot](screenshots/newman-main-report.png)
 
 **Login rate limit collection: 11 requests, 13 assertions, 0 failed**
 
 Eleven wrong-password logins are sent in a row. The first ten are rejected with 401 and the eleventh is blocked with 429.
 
-<img width="757" height="845" alt="Newman login rate limit report" src="https://github.com/user-attachments/assets/26a8cdc8-d601-43e6-b328-09f4956921d6" />
-<br>
+[View screenshot](screenshots/newman-login-report.png)
 
 **Booking rate limit collection: 9 requests, 10 assertions, 0 failed**
 
 After three setup requests, five bookings succeed and the sixth is blocked with 429.
 
-<img width="842" height="832" alt="Newman booking rate limit report" src="https://github.com/user-attachments/assets/687fc01b-a021-4f67-8c94-afab04bc8ec6" />
-<br>
+[View screenshot](screenshots/newman-booking-report.png)
 
 ### 📮 Postman runs
 
@@ -722,29 +718,25 @@ After three setup requests, five bookings succeed and the sixth is blocked with 
 
 The same collection run in Postman. The summary shows 92 tests passed and no errors.
 
-<img width="1415" height="907" alt="Postman main collection run" src="https://github.com/user-attachments/assets/9e07cf67-47c2-4333-8d01-8f3d25bc8e15" />
-<br>
+[View screenshot](screenshots/postman-main-collection-run.png)
 
 **Login rate limit collection: 13 tests passed**
 
 The login rate limit collection run in Postman, with every test passing.
 
-<img width="1307" height="912" alt="Postman login rate limit run" src="https://github.com/user-attachments/assets/fd7dc28a-d6d7-42bc-87da-1f30e5cc0370" />
-<br>
+[View screenshot](screenshots/postman-login-collection-run.png)
 
 **Booking rate limit collection: 10 tests passed**
 
 The booking rate limit collection run in Postman, with every test passing.
 
-<img width="1437" height="905" alt="Postman booking rate limit run" src="https://github.com/user-attachments/assets/57544a8a-2eb5-4828-ab3f-f6c4b2c7dedb" />
-<br>
+[View screenshot](screenshots/postman-booking-collection-run.png)
 
 **A client trying to create a gig is rejected with 403**
 
 Only freelancers can create gigs. The response on the right is the message a client receives.
 
-<img width="1342" height="896" alt="403 response for a client creating a gig" src="https://github.com/user-attachments/assets/11c9eb62-cf92-494a-98fa-36a75a88fa0e" />
-<br>
+[View screenshot](screenshots/403-wrong-role.png)
 
 ### 🖥️ The application
 
@@ -752,71 +744,61 @@ Only freelancers can create gigs. The response on the right is the message a cli
 
 The registration form asks for an email, a password and a role. The password rules are shown under the password field.
 
-<img width="1907" height="966" alt="Register page" src="https://github.com/user-attachments/assets/4c9e9b1e-2649-4010-9526-b2566c4eeccf" />
-<br>
+[View screenshot](screenshots/register-page.png)
 
 **Login page**
 
 The login form with email and password fields, and a link to register.
 
-<img width="1802" height="661" alt="Login page" src="https://github.com/user-attachments/assets/bbd67b6c-cc15-415a-964c-6acf1457c773" />
-<br>
+[View screenshot](screenshots/login-page.png)
 
 **Browse gigs**
 
-Every gig is shown as a card with its category, price, delivery time and freelancer. 
+Every gig is shown as a card with its category, price, delivery time and freelancer.
 
-<img width="600" alt="Browse gigs page" src="https://github.com/user-attachments/assets/ec01bead-71e1-4ed1-b29a-bc572da24c70" />
-<br>
+[View screenshot](screenshots/freelancer-browse-gigs.png)
 
 **Client bookings page**
 
 A client's booking history, showing the gig, freelancer, amount, reference and status of each booking.
 
-<img width="1906" height="957" alt="Client bookings page" src="https://github.com/user-attachments/assets/d7dd28ae-3fdc-4f7f-b417-dd004e2d4c00" />
-<br>
+[View screenshot](screenshots/clients-booking-page.png)
 
 **Freelancer dashboard: my gigs**
 
 The freelancer's own gigs, with a button to create a new gig and a delete button on each one.
 
-<img width="1902" height="959" alt="Freelancer dashboard, my gigs" src="https://github.com/user-attachments/assets/b3d63aba-17f0-4e30-b7dc-30de14f7f90e" />
-<br>
+[View screenshot](screenshots/freelancer-dashboard.png)
 
 **Freelancer dashboard: bookings received**
 
 Bookings made on the freelancer's gigs, showing the client, amount, reference and booking date.
 
-<img width="1817" height="942" alt="Freelancer dashboard, bookings received" src="https://github.com/user-attachments/assets/b1183485-b2ed-4691-b4e7-3ae5992bde16" />
-<br>
+[View screenshot](screenshots/freelancer-dashboard-2.png)
 
 **Freelancer dashboard: income of R6,250 and estimated tax of R1,125 at 18%**
 
 The income summary shows total income, the number of transactions, the estimated tax and the income after tax, with a note that it is an indication only.
 
-<img width="1912" height="947" alt="Freelancer dashboard, income" src="https://github.com/user-attachments/assets/47c36dea-8250-44a3-95f1-0bcadf39e9c8" />
-<br>
+[View screenshot](screenshots/freelancer-dashboard-3.png)
 
 **Admin page: users**
 
 The admin-only page listing all 7 users with their role and join date.
 
-<img width="1917" height="962" alt="Admin page, users" src="https://github.com/user-attachments/assets/009dca7c-c075-4ea9-bb00-d74b296f0485" />
-<br>
+[View screenshot](screenshots/admin-1.png)
 
 **Admin page: gigs**
 
 All 10 gigs on the platform, with their category, price and freelancer.
 
-<img width="1907" height="957" alt="Admin page, gigs" src="https://github.com/user-attachments/assets/268fa320-e97e-4eba-b92f-1706dbec7512" />
-<br>
+[View screenshot](screenshots/admin-2.png)
 
-**Admin page: bookings** 
+**Admin page: bookings**
 
 All 11 bookings on the platform, with the gig, client, freelancer, amount and reference.
 
-<img width="1907" height="952" alt="Admin page, bookings" src="https://github.com/user-attachments/assets/5a42160d-c076-4b63-bf05-1e9c06498447" />
-<br>
+[View screenshot](screenshots/admin-3.png)
 
 ---
 
