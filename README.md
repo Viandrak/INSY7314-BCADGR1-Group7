@@ -804,10 +804,11 @@ All 11 bookings on the platform, with the gig, client, freelancer, amount and re
 
 <a id="demonstration-video"></a>
 
+<a id="demonstration-video"></a>
+
 ## 🎥 Demonstration video
-> [!IMPORTANT]
-> **🛠️ P3 — to be completed**
-> Add the link to the Part 2 demonstration video.
+
+[Watch the Part 2 demonstration video on YouTube](https://www.youtube.com/watch?v=dCG_UuLsVz8)
 
 ---
 <a id="team-and-contributions"></a>
