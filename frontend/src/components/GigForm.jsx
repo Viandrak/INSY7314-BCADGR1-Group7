@@ -2,7 +2,9 @@ import { useState } from 'react';
 
 const CATEGORIES = ['Design', 'Development', 'Writing', 'Marketing', 'Tutoring', 'Other'];
 
-function GigForm({ initialValues, onSubmit, submitLabel = 'Save' }) {
+// initialValues fills the form with an existing gig's details when editing
+// onCancel is optional: when given, a Cancel button is shown next to submit
+function GigForm({ initialValues, onSubmit, submitLabel = 'Save', onCancel }) {
   const [title, setTitle] = useState(initialValues?.title || '');
   const [description, setDescription] = useState(initialValues?.description || '');
   const [category, setCategory] = useState(initialValues?.category || CATEGORIES[0]);
@@ -72,6 +74,11 @@ function GigForm({ initialValues, onSubmit, submitLabel = 'Save' }) {
       <button type="submit" disabled={submitting}>
         {submitting ? 'Saving...' : submitLabel}
       </button>
+      {onCancel && (
+        <button type="button" onClick={onCancel} className="secondary" disabled={submitting}>
+          Cancel
+        </button>
+      )}
     </form>
   );
 }
