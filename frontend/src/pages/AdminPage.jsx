@@ -9,9 +9,8 @@ function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+ // loading starts as true and error as '', so the effect only needs to update state once the requests finish
   useEffect(() => {
-    setLoading(true);
-    setError('');
     Promise.all([fetchAllUsers(), fetchAllGigsAdmin(), fetchAllBookingsAdmin()])
       .then(([usersData, gigsData, bookingsData]) => {
         setUsers(usersData);

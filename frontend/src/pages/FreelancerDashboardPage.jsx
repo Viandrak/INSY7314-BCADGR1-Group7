@@ -13,20 +13,23 @@ function FreelancerDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Fetches all dashboard data. State is only updated once the requests finish
+  // so this is safe to call from the effect below
   function loadAll() {
-    setLoading(true);
-    setError('');
     Promise.all([fetchMyGigs(), fetchReceivedBookings(), fetchIncomeSummary()])
       .then(([gigsData, bookingsData, incomeData]) => {
         setGigs(gigsData);
         setBookings(bookingsData);
         setIncome(incomeData);
       })
+      .then(() => setError(''))
       .catch((err) => setError(err.friendlyMessage || 'Could not load dashboard data.'))
       .finally(() => setLoading(false));
   }
 
-  useEffect(loadAll, []);
+  useEffect(() => {
+    loadAll();
+  }, []);
 
   async function handleCreateGig(gigData) {
     await createGig(gigData);
