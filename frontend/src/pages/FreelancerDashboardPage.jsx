@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchMyGigs, createGig, deleteGig } from '../api/gigs';
+import { fetchMyGigs, createGig, updateGig, deleteGig } from '../api/gigs';
 import { fetchReceivedBookings } from '../api/bookings';
 import { fetchIncomeSummary } from '../api/income';
 import GigForm from '../components/GigForm';
@@ -10,6 +10,8 @@ function FreelancerDashboardPage() {
   const [bookings, setBookings] = useState([]);
   const [income, setIncome] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  // ID of the gig currently being edited, or null when no gig is being edited
+  const [editingGigId, setEditingGigId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -34,6 +36,14 @@ function FreelancerDashboardPage() {
   async function handleCreateGig(gigData) {
     await createGig(gigData);
     setShowForm(false);
+    loadAll();
+  }
+
+  // Sends the edited details to PATCH /api/gigs/:id. If the request fails
+  // the error is thrown back to GigForm, which shows it inside the form
+  async function handleUpdateGig(id, gigData) {
+    await updateGig(id, gigData);
+    setEditingGigId(null);
     loadAll();
   }
 
@@ -72,10 +82,22 @@ function FreelancerDashboardPage() {
           <div className="gig-list">
             {gigs.map((gig) => (
               <div key={gig.id} className="gig-card">
-                <h2>{gig.title}</h2>
-                <p className="gig-category">{gig.category}</p>
-                <p>R{gig.price} · {gig.deliveryDays} day delivery</p>
-                <button onClick={() => handleDeleteGig(gig.id)} className="secondary">Delete</button>
+                {editingGigId === gig.id ? (
+                  <GigForm
+                    initialValues={gig}
+                    onSubmit={(gigData) => handleUpdateGig(gig.id, gigData)}
+                    onCancel={() => setEditingGigId(null)}
+                    submitLabel="Save Changes"
+                  />
+                ) : (
+                  <>
+                    <h2>{gig.title}</h2>
+                    <p className="gig-category">{gig.category}</p>
+                    <p>R{gig.price} · {gig.deliveryDays} day delivery</p>
+                    <button onClick={() => setEditingGigId(gig.id)}>Edit</button>
+                    <button onClick={() => handleDeleteGig(gig.id)} className="secondary">Delete</button>
+                  </>
+                )}
               </div>
             ))}
           </div>
