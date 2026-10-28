@@ -63,8 +63,10 @@ jobs:
     name: Security scans
     runs-on: ubuntu-latest
     steps:
-      - name: Check out code
+      - name: Check out code (full history for secret scanning)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -80,3 +82,10 @@ jobs:
       - name: Audit frontend dependencies
         working-directory: frontend
         run: npm audit --audit-level=high
+
+      # Fails the job if any secret (API key, password, token, private key)
+      # is found in the commits being scanned
+      - name: Scan for secrets with Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
