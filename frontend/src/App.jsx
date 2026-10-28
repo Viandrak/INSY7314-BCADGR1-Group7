@@ -32,8 +32,24 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/gigs" element={<BrowseGigsPage />} />
-          <Route path="/gigs/:id" element={<GigDetailPage />} />
+          {/* The gig API requires a login, so these pages do too.
+              Logged-out visitors are sent to the login page instead of seeing an API error. */}
+          <Route
+            path="/gigs"
+            element={
+              <ProtectedRoute loginMessage="Please log in or register to browse gigs.">
+                <BrowseGigsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/gigs/:id"
+            element={
+              <ProtectedRoute loginMessage="Please log in or register to browse gigs.">
+                <GigDetailPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/bookings"
             element={
