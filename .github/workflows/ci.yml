@@ -1,0 +1,13 @@
+name: CI
+
+on:
+  push:
+    branches: [main, viandra-part3, kaitlyn-part3, nikkita-part3]
+  pull_request:
+    branches: [main]
+
+# Least privilege: jobs can only read the repository contents
+permissions:
+  contents: read
+
+jobs:
