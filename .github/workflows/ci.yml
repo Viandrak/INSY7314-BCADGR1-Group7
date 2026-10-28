@@ -58,3 +58,25 @@ jobs:
 
       - name: Build frontend
         run: npm run build
+
+  security:
+    name: Security scans
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Fails the job if any high or critical vulnerability is found
+      # Low and moderate findings are still listed in the log
+      - name: Audit backend dependencies
+        working-directory: backend
+        run: npm audit --audit-level=high
+
+      - name: Audit frontend dependencies
+        working-directory: frontend
+        run: npm audit --audit-level=high
