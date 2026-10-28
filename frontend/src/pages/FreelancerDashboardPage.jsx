@@ -14,6 +14,7 @@ function FreelancerDashboardPage() {
   const [editingGigId, setEditingGigId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
 
   // Fetches all dashboard data. State is only updated once the requests finish
   // so this is safe to call from the effect below
@@ -33,6 +34,20 @@ function FreelancerDashboardPage() {
     loadAll();
   }, []);
 
+  // Opens the edit form for one gig. Only one gig form is open at a time
+  // so the create form is closed and any old success message is cleared
+  function startEditing(id) {
+    setEditingGigId(id);
+    setShowForm(false);
+    setMessage('');
+  }
+
+  function toggleCreateForm() {
+    setShowForm((v) => !v);
+    setEditingGigId(null);
+    setMessage('');
+  }
+
   async function handleCreateGig(gigData) {
     await createGig(gigData);
     setShowForm(false);
@@ -44,11 +59,13 @@ function FreelancerDashboardPage() {
   async function handleUpdateGig(id, gigData) {
     await updateGig(id, gigData);
     setEditingGigId(null);
+    setMessage('Gig updated successfully.');
     loadAll();
   }
 
   async function handleDeleteGig(id) {
     if (!window.confirm('Delete this gig? This cannot be undone.')) return;
+    setMessage('');
     try {
       await deleteGig(id);
       loadAll();
@@ -70,10 +87,11 @@ function FreelancerDashboardPage() {
       </div>
 
       {error && <p className="error-message" role="alert">{error}</p>}
+      {message && <p className="success-message" role="status">{message}</p>}
 
       {tab === 'gigs' && (
         <div>
-          <button onClick={() => setShowForm((v) => !v)} className={showForm ? 'secondary' : ''}>
+          <button onClick={toggleCreateForm} className={showForm ? 'secondary' : ''}>
            {showForm ? 'Cancel' : 'Create New Gig'}
           </button>
           {showForm && <GigForm onSubmit={handleCreateGig} submitLabel="Create Gig" />}
@@ -94,7 +112,7 @@ function FreelancerDashboardPage() {
                     <h2>{gig.title}</h2>
                     <p className="gig-category">{gig.category}</p>
                     <p>R{gig.price} · {gig.deliveryDays} day delivery</p>
-                    <button onClick={() => setEditingGigId(gig.id)}>Edit</button>
+                    <button onClick={() => startEditing(gig.id)}>Edit</button>
                     <button onClick={() => handleDeleteGig(gig.id)} className="secondary">Delete</button>
                   </>
                 )}
