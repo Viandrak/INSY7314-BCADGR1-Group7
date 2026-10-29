@@ -423,6 +423,11 @@ For example, `{ "email": { "$gt": "" } }` loses its `$gt` operator, and the empt
 
 **3. Validation (per route).** `express-validator` checks the type, length and range of every field and returns `400` with the first error message.
 
+<details>
+<summary><b>📋 Validation rules for each field</b></summary>
+
+<br>
+
 | Field | Rule |
 |-------|------|
 | `email` | Text, valid email format, normalised |
@@ -435,6 +440,8 @@ For example, `{ "email": { "$gt": "" } }` loses its `$gt` operator, and the empt
 | `deliveryDays` | Whole number from 1 to 365 |
 | `gigId` | Text, exactly 24 characters, then checked against the database |
 
+</details>
+
 Update requests may be partial, so each gig field is only checked if it is present. IDs in URLs must be 24 hexadecimal characters, the gig `category` filter only accepts values from the allowed list, and request bodies are capped at 10 kB. Endpoints that take no body (`GET` and `DELETE`) are protected by authentication, role checks and these URL checks.
 
 > [!NOTE]
@@ -443,6 +450,11 @@ Update requests may be partial, so each gig field is only checked if it is prese
 ### Security headers and Content Security Policy
 
 Helmet sets security headers on every API response, including a `Content-Security-Policy`, `X-Content-Type-Options: nosniff` and `Strict-Transport-Security`, and removes the `X-Powered-By` header that reveals the server software. The API only returns JSON, so the policy is kept strict:
+
+<details>
+<summary><b>🧱 Content Security Policy directives</b></summary>
+
+<br>
 
 | Directive | Value | Why |
 |-----------|-------|-----|
@@ -453,6 +465,8 @@ Helmet sets security headers on every API response, including a `Content-Securit
 | `connect-src` | `'self'` | Connections only to the API's own origin |
 | `object-src` | `'none'` | Blocks plug-ins such as Flash |
 | `frame-ancestors` | `'none'` | The API cannot be embedded in a frame, which prevents clickjacking |
+
+</details>
 
 `Cross-Origin-Resource-Policy` is set to `cross-origin` so the React app, which runs on a different origin, can read API responses.
 
@@ -759,6 +773,11 @@ The Jest tests do not call the full routes and controllers together (except regi
 
 The backend has **127 Jest tests in 12 files**, in `backend/tests/`. Each test builds a small Express app containing only the middleware it is testing, so **no database, `.env` file or HTTPS certificate is needed**. A setup file (`tests/setup.js`) gives tests a safe, test-only JWT secret.
 
+<details>
+<summary><b>🧪 All 12 backend test files</b></summary>
+
+<br>
+
 | Test file | Tests | What it covers |
 |-----------|:-----:|----------------|
 | `authValidation.test.js` | 15 | Registration and login rules, including blocking the `admin` role and NoSQL injection through objects |
@@ -773,6 +792,8 @@ The backend has **127 Jest tests in 12 files**, in `backend/tests/`. Each test b
 | `rbacMiddleware.test.js` | 8 | Allowed and blocked roles, missing users and made-up roles |
 | `errorHandler.test.js` | 6 | `404`, malformed JSON, and no leaking of internal error details |
 | `rateLimit.test.js` | 16 | Login, booking and general API limits, invalid `API_RATE_LIMIT` values, and that the general limit is applied in `app.js` |
+
+</details>
 
 `registerStoresHash.test.js` replaces the User model with a fake, so it proves what the registration controller **tries to save**. The User model itself only has a `passwordHash` field, which supports what MongoDB actually stores.
 
@@ -789,6 +810,11 @@ Frontend tests use **Vitest** with **React Testing Library**, which renders comp
 
 There are **29 tests in 7 files**:
 
+<details>
+<summary><b>🧪 All 7 frontend test files</b></summary>
+
+<br>
+
 | Test file | Tests | What it covers |
 |-----------|:-----:|----------------|
 | `GigForm.test.jsx` | 4 | Form fields, invalid input and submitted values |
@@ -798,6 +824,8 @@ There are **29 tests in 7 files**:
 | `LoginPage.test.jsx` | 4 | The login form, typing, invalid credentials and the API call |
 | `RegisterPage.test.jsx` | 3 | The role selector, duplicate email and successful registration |
 | `Navbar.test.jsx` | 3 | Links shown when logged out, and for a freelancer and an admin |
+
+</details>
 
 The edit tests use mocked API functions, so they prove the dashboard calls `updateGig()` correctly. The real `PATCH /api/gigs/:id` request is covered by the Postman collection.
 
