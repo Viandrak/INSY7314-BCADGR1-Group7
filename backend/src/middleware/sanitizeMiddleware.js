@@ -28,7 +28,7 @@ function isSafeKey(key) {
 
 // Builds a new object from the safe keys only. Object.fromEntries defines each
 // key as a normal property, so even a missed special key could never change
-// the object's prototype
+// the object's prototype (OWASP Foundation, 2021)
 function sanitizeObject(obj) {
   return Object.fromEntries(
     Object.entries(obj)

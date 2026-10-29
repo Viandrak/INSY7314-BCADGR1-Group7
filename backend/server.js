@@ -32,21 +32,15 @@ startServer();
 /*
  * References:
  *
- * express-rate-limit, 2026. express-rate-limit - Basic rate-limiting middleware for Express. [Online] Available at: https://www.npmjs.com/package/express-rate-limit [Accessed 27 September 2026].
+ * GitHub, 2026. Concepts for CodeQL. [Online] Available at: https://docs.github.com/en/code-security/concepts/code-scanning/codeql [Accessed 28 October 2026].
  *
- * MongoDB, Inc., 2026. Transactions. MongoDB Manual. [Online] Available at: https://www.mongodb.com/docs/manual/core/transactions/ [Accessed 27 September 2026].
+ * Microsoft, 2026a. What is DevSecOps? [Online] Available at: https://www.microsoft.com/en-us/security/business/security-101/what-is-devsecops [Accessed 28 October 2026].
  *
- * Mongoose, 2025. Mongoose ODM documentation. [Online] Available at: https://mongoosejs.com/docs/ [Accessed 27 September 2026].
+ * Microsoft, 2026b. Rate Limiting pattern. [Online] Available at: https://learn.microsoft.com/en-us/azure/architecture/patterns/rate-limiting-pattern [Accessed 29 October 2026].
  *
- * OpenAI, 2026. ChatGPT. OpenAI. [Online] Available at: https://chatgpt.com/share/6ab80aa6-3a48-83ea-8842-6084ce8684fe [Accessed 27 September 2026].
+ * OpenAI, 2026. ChatGPT. OpenAI. [Online] Available at: https://chatgpt.com/share/6ae259e2-e664-83e9-b664-0961b7d8dfae [Accessed 28 October 2026].
  *
- * OWASP Foundation, 2026a. Authorization Cheat Sheet. [Online] Available at: https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html [Accessed 27 September 2026].
+ * OWASP Foundation, 2021. A03:2021 – Injection. [Online] Available at: https://owasp.org/Top10/2021/A03_2021-Injection/ [Accessed 29 October 2026].
  *
- * OWASP Foundation, 2026b. Mass Assignment Cheat Sheet. [Online] Available at: https://cheatsheetseries.owasp.org/cheatsheets/Mass_Assignment_Cheat_Sheet.html [Accessed 27 September 2026].
- * 
- * GeeksforGeeks, 2020. Node.Js securing apps with helmet.Js. GeeksforGeeks. [Online]  Available at: https://www.geeksforgeeks.org/node-js/node-js-securing-apps-with-helmet-js/ [Accessed 8 Oct. 2026].
- * 
- * GeeksforGeeks, 2024. What is the purpose of the expressvalidator middleware in express JS? GeeksforGeeks. [Online] Available at: https://www.geeksforgeeks.org/node-js/what-is-the-purpose-of-the-express-validator-middleware-in-express-js/ [Accessed 11 Oct. 2026].
- * 
- * GeeksforGeeks, 2024. How to use Newman with postman ? GeeksforGeeks. [Online]  Available at: https://www.geeksforgeeks.org/node-js/how-to-use-newman-with-postman/ [Accessed 11 Oct. 2026].
+ * OWASP Foundation, 2025. A03:2025 – Software Supply Chain Failures. [Online] Available at: https://owasp.org/Top10/2025/A03_2025-Software_Supply_Chain_Failures/ [Accessed 29 October 2026].
  */
