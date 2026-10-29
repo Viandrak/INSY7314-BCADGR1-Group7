@@ -9,6 +9,7 @@ const incomeRoutes = require('./src/routes/incomeRoutes');
 const adminRoutes = require('./src/routes/adminRoutes');
 const { notFoundHandler, centralErrorHandler } = require('./src/middleware/errorHandler');
 const { sanitizeInput } = require('./src/middleware/sanitizeMiddleware');
+const { apiLimiter } = require('./src/middleware/rateLimitMiddleware');
 
 // Builds and configures the Express app
 const app = express();
@@ -46,6 +47,8 @@ app.get('/', (req, res) => {
   res.json({ message: 'HustleHub+ API is running' });
 });
 
+// General rate limit for every API route
+app.use('/api', apiLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/protected', protectedRoutes);
 app.use('/api/gigs', gigRoutes);
