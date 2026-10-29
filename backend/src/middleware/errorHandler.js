@@ -5,7 +5,9 @@ function notFoundHandler(req, res) {
   });
 }
 
-function centralErrorHandler(err, req, res, next) {
+// Express only treats a function as an error handler if it has four
+// parameters, so _next must stay even though it is not used
+function centralErrorHandler(err, req, res, _next) {
   console.error(err.stack || err);
 
   if (err.type === 'entity.parse.failed') {

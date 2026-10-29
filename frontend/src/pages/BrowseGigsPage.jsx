@@ -10,10 +10,15 @@ function BrowseGigsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    let cancelled = false;
+   // Resets the loading and error state when the filter changes, so the effect itself only updates state after the request finishes
+  function handleCategoryChange(event) {
+    setCategory(event.target.value);
     setLoading(true);
     setError('');
+  }
+
+  useEffect(() => {
+    let cancelled = false;
 
     fetchGigs(category || undefined)
       .then((data) => {
@@ -34,7 +39,7 @@ function BrowseGigsPage() {
       <h1>Browse Gigs</h1>
 
       <label htmlFor="category-filter">Filter by category</label>
-      <select id="category-filter" value={category} onChange={(e) => setCategory(e.target.value)}>
+           <select id="category-filter" value={category} onChange={handleCategoryChange}>
         <option value="">All categories</option>
         {CATEGORIES.map((c) => (
           <option key={c} value={c}>{c}</option>

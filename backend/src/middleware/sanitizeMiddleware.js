@@ -19,17 +19,25 @@ function sanitizeValue(value) {
   return value;
 }
 
-// Drops any key that starts with "$" or contains "." (NoSQL injection shapes)
+// Keys that would change an object's prototype instead of adding normal data
+const PROTOTYPE_KEYS = ['__proto__', 'constructor', 'prototype'];
+
+function isSafeKey(key) {
+  return !key.startsWith('$') && !key.includes('.') && !PROTOTYPE_KEYS.includes(key);
+}
+
+// Builds a new object from the safe keys only. Object.fromEntries defines each
+// key as a normal property, so even a missed special key could never change
+// the object's prototype (OWASP Foundation, 2021)
 function sanitizeObject(obj) {
-  const clean = {};
-  for (const key of Object.keys(obj)) {
-    if (key.startsWith('$') || key.includes('.')) {
-      continue;
-    }
-    const keepAsTyped = UNTOUCHED_TEXT_KEYS.includes(key) && typeof obj[key] === 'string';
-    clean[key] = keepAsTyped ? obj[key] : sanitizeValue(obj[key]);
-  }
-  return clean;
+  return Object.fromEntries(
+    Object.entries(obj)
+      .filter(([key]) => isSafeKey(key))
+      .map(([key, value]) => {
+        const keepAsTyped = UNTOUCHED_TEXT_KEYS.includes(key) && typeof value === 'string';
+        return [key, keepAsTyped ? value : sanitizeValue(value)];
+      })
+  );
 }
 
 function sanitizeInput(req, res, next) {

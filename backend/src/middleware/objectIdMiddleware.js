@@ -8,9 +8,11 @@ function isValidObjectId(value) {
 }
 
 // Rejects malformed IDs in the URL before they reach the database,
-// returning a clear 400 instead of an unexpected server error.
+// returning a clear 400 instead of an unexpected server error
 function validateObjectId(paramName = 'id') {
   return (req, res, next) => {
+    // paramName is set in the route files (for example 'id'), never from the request
+    // eslint-disable-next-line security/detect-object-injection
     if (!isValidObjectId(req.params[paramName])) {
       return sendError(res, 400, 'Invalid ID format.');
     }

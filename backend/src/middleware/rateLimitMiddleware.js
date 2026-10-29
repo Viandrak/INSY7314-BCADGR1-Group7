@@ -55,4 +55,17 @@ const bookingLimiter = createLimiter({
   keyGenerator: (req) => `user:${req.user.id}`,
 });
 
-module.exports = { authLimiter, bookingLimiter };
+// General limit for every API route: 300 requests per IP every 15 minutes (Microsoft, 2026b).
+const configuredApiLimit = Number(process.env.API_RATE_LIMIT);
+const apiLimit =
+  Number.isSafeInteger(configuredApiLimit) && configuredApiLimit > 0
+    ? configuredApiLimit
+    : 300;
+
+const apiLimiter = createLimiter({
+  windowMs: 15 * 60 * 1000,
+  limit: apiLimit,
+  message: 'Too many requests. Please try again later.',
+});
+
+module.exports = { authLimiter, bookingLimiter, apiLimiter };

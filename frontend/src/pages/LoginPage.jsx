@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useAuth } from '../context/useAuth';
 
 function LoginPage() {
   const [email, setEmail] = useState('');
@@ -9,6 +9,8 @@ function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  // Message passed by ProtectedRoute when a logged-out visitor is redirected here
+  const redirectMessage = useLocation().state?.message;
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -27,6 +29,7 @@ function LoginPage() {
   return (
     <div className="auth-page">
       <h1>Log in</h1>
+      {redirectMessage && <p className="hint" role="status">{redirectMessage}</p>}
       <form onSubmit={handleSubmit}>
         <label htmlFor="email">Email</label>
         <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />

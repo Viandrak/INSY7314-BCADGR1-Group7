@@ -1,7 +1,9 @@
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 
-function ProtectedRoute({ children, allowedRoles }) {
+// loginMessage is optional: when given, it is passed to the login page so the
+// visitor can see why they were sent there
+function ProtectedRoute({ children, allowedRoles, loginMessage }) {
   const { isAuthenticated, user, loading } = useAuth();
 
   if (loading) {
@@ -9,7 +11,7 @@ function ProtectedRoute({ children, allowedRoles }) {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" replace state={loginMessage ? { message: loginMessage } : undefined} />;
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {

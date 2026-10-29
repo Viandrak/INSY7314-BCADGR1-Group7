@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+    branches: [main, viandra-part3, kaitlyn-part3, nikkita-part3]
+  pull_request:
+    branches: [main]
+
+# Least privilege: jobs can only read the repository contents
+permissions:
+  contents: read
+
+# One place to change the Node.js version used by every job
+env:
+  NODE_VERSION: 22
+
+jobs:
+  backend:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Fails on any ESLint error or warning, including eslint-plugin-security
+      - name: Run backend lint (including security rules)
+        run: npm run lint
+
+      - name: Run backend tests
+        run: npm test
+
+  frontend:
+    name: Frontend lint, tests and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run frontend tests
+        run: npm test
+
+      - name: Build frontend
+        run: npm run build
+
+  security:
+    name: Security scans
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code (full history for secret scanning)
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # Fails the job if any high or critical vulnerability is found
+      # Low and moderate findings are still listed in the log
+      - name: Audit backend dependencies
+        working-directory: backend
+        run: npm audit --audit-level=high
+
+      - name: Audit frontend dependencies
+        working-directory: frontend
+        run: npm audit --audit-level=high
+
+      # Fails the job if any secret (API key, password, token, private key)
+      # is found in the commits being scanned
+      - name: Scan for secrets with Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # The action above only scans the newest commit on a push
+      # This scans every commit in the repository's history, so a secret
+      # that was committed and later deleted would still be caught (Microsoft, 2026a)
+      - name: Scan full git history for secrets
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz | tar -xz gitleaks
+          ./gitleaks git . --redact --verbose --exit-code 1

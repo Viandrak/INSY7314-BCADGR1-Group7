@@ -1,0 +1,40 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main, viandra-part3, kaitlyn-part3, nikkita-part3]
+  pull_request:
+    branches: [main]
+
+# Least privilege by default
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: CodeQL analysis (JavaScript)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Needed to upload results to the Security tab
+      security-events: write
+      actions: read
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      # Static analysis for vulnerabilities, using the extended security queries
+      # Secrets are checked separately by Gitleaks in ci.yml
+      # The config file excludes the generated Newman reports
+      - name: Initialise CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          build-mode: none
+          queries: security-extended
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: Run CodeQL analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:javascript-typescript"
