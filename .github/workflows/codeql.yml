@@ -25,12 +25,14 @@ jobs:
 
       # Static analysis for vulnerabilities, using the extended security queries
       # Secrets are checked separately by Gitleaks in ci.yml
+      # The config file excludes the generated Newman reports
       - name: Initialise CodeQL
         uses: github/codeql-action/init@v4
         with:
           languages: javascript-typescript
           build-mode: none
           queries: security-extended
+          config-file: ./.github/codeql/codeql-config.yml
 
       - name: Run CodeQL analysis
         uses: github/codeql-action/analyze@v4
