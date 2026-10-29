@@ -3,7 +3,8 @@ const request = require('supertest');
 const { sanitizeInput } = require('../src/middleware/sanitizeMiddleware');
 
 // Builds a small test app that runs the sanitisation middleware and then
-// echoes back the cleaned body and query string
+// echoes back the cleaned body and query string, so the tests can see
+// exactly what a controller would receive
 function buildApp() {
   const app = express();
   app.use(express.json());
@@ -71,6 +72,44 @@ describe('Input sanitisation middleware', () => {
         .post('/echo')
         .send({ tags: ['<b>design</b>', '$logo'] });
       expect(res.body.body.tags).toEqual(['bdesign/b', 'logo']);
+    });
+  });
+
+  describe('Prototype pollution protection', () => {
+    test('drops a __proto__ key so it cannot add hidden inherited fields', async () => {
+      const res = await request(app)
+        .post('/echo')
+        .set('Content-Type', 'application/json')
+        .send('{"title":"Logo Design","__proto__":{"role":"admin","isAdmin":true}}');
+      expect(res.body.body).toEqual({ title: 'Logo Design' });
+    });
+
+    test('the cleaned body has no inherited role after a __proto__ attempt', async () => {
+      const inspectApp = express();
+      inspectApp.use(express.json());
+      inspectApp.use(sanitizeInput);
+      inspectApp.post('/inspect', (req, res) => {
+        res.json({
+          role: req.body.role,
+          isAdmin: req.body.isAdmin,
+          normalPrototype: Object.getPrototypeOf(req.body) === Object.prototype,
+        });
+      });
+      const res = await request(inspectApp)
+        .post('/inspect')
+        .set('Content-Type', 'application/json')
+        .send('{"title":"x","__proto__":{"role":"admin","isAdmin":true}}');
+      expect(res.body.role).toBeUndefined();
+      expect(res.body.isAdmin).toBeUndefined();
+      expect(res.body.normalPrototype).toBe(true);
+    });
+
+    test('drops constructor and prototype keys, including nested ones', async () => {
+      const res = await request(app)
+        .post('/echo')
+        .set('Content-Type', 'application/json')
+        .send('{"title":"x","constructor":{"prototype":{"role":"admin"}},"profile":{"prototype":"y","name":"z"}}');
+      expect(res.body.body).toEqual({ title: 'x', profile: { name: 'z' } });
     });
   });
 

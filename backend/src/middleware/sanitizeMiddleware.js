@@ -19,11 +19,12 @@ function sanitizeValue(value) {
   return value;
 }
 
-// Drops any key that starts with "$" or contains "." (NoSQL injection shapes)
+// Keys that would change an object's prototype instead of adding normal data
+const PROTOTYPE_KEYS = ['__proto__', 'constructor', 'prototype'];
 function sanitizeObject(obj) {
   const clean = {};
   for (const key of Object.keys(obj)) {
-    if (key.startsWith('$') || key.includes('.')) {
+    if (key.startsWith('$') || key.includes('.') || PROTOTYPE_KEYS.includes(key)) {
       continue;
     }
     const keepAsTyped = UNTOUCHED_TEXT_KEYS.includes(key) && typeof obj[key] === 'string';
