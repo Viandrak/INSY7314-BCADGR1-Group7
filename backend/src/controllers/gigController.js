@@ -84,8 +84,11 @@ async function updateGig(req, res) {
   // Only allow changes to specific gig fields. Fields like "freelancer"
   // are ignored, so ownership can never be transferred through an update.
   const updates = {};
-  for (const field of UPDATABLE_GIG_FIELDS) {
+   for (const field of UPDATABLE_GIG_FIELDS) {
+    // field always comes from the fixed UPDATABLE_GIG_FIELDS list above, never from the request
+    // eslint-disable-next-line security/detect-object-injection
     if (req.body[field] !== undefined) {
+      // eslint-disable-next-line security/detect-object-injection
       updates[field] = req.body[field];
     }
   }

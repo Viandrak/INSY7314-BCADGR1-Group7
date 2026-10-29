@@ -26,7 +26,7 @@ describe('isValidObjectId', () => {
   });
 
   test('rejects values that are not text', () => {
-    expect(isValidObjectId(123456789012345678901234)).toBe(false);
+    expect(isValidObjectId(123456)).toBe(false);
     expect(isValidObjectId({ $gt: '' })).toBe(false);
     expect(isValidObjectId(null)).toBe(false);
     expect(isValidObjectId(undefined)).toBe(false);
