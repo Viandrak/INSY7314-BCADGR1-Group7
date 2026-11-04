@@ -21,7 +21,7 @@ function buildApp() {
   );
   return app;
 }
-\
+
 function mockIncome() {
   Transaction.aggregate.mockResolvedValue([
     {
