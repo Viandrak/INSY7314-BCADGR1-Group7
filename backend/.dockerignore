@@ -1,0 +1,21 @@
+# Dependencies are installed inside the image
+node_modules
+
+# Secrets and local certificates must never be baked into an image
+.env
+*.env
+certs
+*.pem
+
+# Not needed to run the API
+tests
+coverage
+jest.config.js
+eslint.config.js
+npm-debug.log*
+
+# Docker and Git files
+Dockerfile
+.dockerignore
+.git
+.gitignore
