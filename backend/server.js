@@ -1,25 +1,25 @@
-// Load environment variables before anything else reads them
 require('dotenv').config();
 
-const fs = require('fs');
-const https = require('https');
 const app = require('./app');
 const { connectDB } = require('./src/config/database');
+const { createServer, isHttpsEnabled } = require('./src/config/createServer');
 
 const PORT = process.env.PORT || 5000;
 
-// SSL certificate options
-const sslOptions = {
-  key: fs.readFileSync('./certs/localhost-key.pem'),
-  cert: fs.readFileSync('./certs/localhost.pem'),
-};
+// HTTPS is on by default. Set USE_HTTPS=false (for example in Docker, where
+// there are no local certificates) to serve plain HTTP instead.
+const useHttps = isHttpsEnabled(process.env.USE_HTTPS);
 
-// Connect to MongoDB first, then start the HTTPS server
+// Connect to MongoDB first (with retries), then start listening
 async function startServer() {
   try {
+    // Built before connecting so missing certificates fail fast
+    const server = createServer(app, useHttps);
+
     await connectDB();
-    https.createServer(sslOptions, app).listen(PORT, () => {
-      console.log(`HustleHub+ API running securely at https://localhost:${PORT}`);
+    server.listen(PORT, () => {
+      const protocol = useHttps ? 'https' : 'http';
+      console.log(`HustleHub+ API running at ${protocol}://localhost:${PORT}`);
     });
   } catch (err) {
     console.error('HustleHub+ could not start:', err.message);
