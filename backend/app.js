@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const mongoose = require('mongoose');
 const authRoutes = require('./src/routes/authRoutes');
 const protectedRoutes = require('./src/routes/protectedRoutes');
 const gigRoutes = require('./src/routes/gigRoutes');
@@ -45,6 +46,16 @@ app.use(sanitizeInput);
 // Health check route
 app.get('/', (req, res) => {
   res.json({ message: 'HustleHub+ API is running' });
+});
+
+// Health endpoint for Docker and monitoring. It sits before the API rate limiter
+// so frequent health checks are never blocked, and it only reports whether the
+// API and its database connection are working, nothing else.
+app.get('/health', (req, res) => {
+  const databaseConnected = mongoose.connection.readyState === 1;
+  res.status(databaseConnected ? 200 : 503).json({
+    status: databaseConnected ? 'ok' : 'unavailable',
+  });
 });
 
 // General rate limit for every API route
