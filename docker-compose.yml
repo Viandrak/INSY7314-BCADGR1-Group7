@@ -4,12 +4,9 @@ services:
   mongo:
     image: mongo:8
     restart: unless-stopped
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:?Set MONGO_USER}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?Set MONGO_PASSWORD}
+    command: ["--replSet", "rs0", "--bind_ip_all"]
     volumes:
       - mongo-data:/data/db
-    # MongoDB is only reachable from the other containers, not from the host
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -17,20 +14,36 @@ services:
       retries: 10
       start_period: 20s
 
-  # Fills the database with the demo users, gigs, bookings and transactions.
-  # Runs once after MongoDB is healthy and then exits. Note: it clears existing
-  # data first, so every "docker compose up" starts from the same demo data.
+  mongo-init:
+    image: mongo:8
+    restart: "no"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    entrypoint:
+      - mongosh
+      - --host
+      - mongo
+      - --quiet
+      - --eval
+      - |
+        try { rs.status(); } catch (e) { rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'mongo:27017' }] }); }
+        while (!db.hello().isWritablePrimary) { sleep(500); }
+        print('Replica set ready');
+
   seed:
     build: ./backend
     command: ["node", "scripts/seed.js"]
     restart: "no"
     environment:
       NODE_ENV: development # the seed script refuses to run in production
-      MONGODB_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongo:27017/hustlehub?authSource=admin
+      MONGODB_URI: ${MONGODB_URI:-mongodb://mongo:27017/hustlehub?replicaSet=rs0}
       SEED_PASSWORD: ${SEED_PASSWORD:?Set SEED_PASSWORD}
     depends_on:
       mongo:
         condition: service_healthy
+      mongo-init:
+        condition: service_completed_successfully
 
   backend:
     build: ./backend
@@ -38,10 +51,10 @@ services:
     environment:
       NODE_ENV: production
       PORT: 5000
-      USE_HTTPS: "false" # no certificates inside the container
+      USE_HTTPS: ${USE_HTTPS:-false} # no certificates inside the container
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
       JWT_EXPIRES_IN: 1h
-      MONGODB_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongo:27017/hustlehub?authSource=admin
+      MONGODB_URI: ${MONGODB_URI:-mongodb://mongo:27017/hustlehub?replicaSet=rs0}
       FRONTEND_URL: http://localhost:8080
       AUTH_RATE_LIMIT: ${AUTH_RATE_LIMIT:-10}
       BOOKING_RATE_LIMIT: ${BOOKING_RATE_LIMIT:-5}
@@ -51,6 +64,8 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
+      mongo-init:
+        condition: service_completed_successfully
       seed:
         condition: service_completed_successfully
     healthcheck:
