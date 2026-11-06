@@ -8,12 +8,13 @@ services:
     volumes:
       - mongo-data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongosh", "--host", "127.0.0.1", "--quiet", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 10s
       retries: 10
       start_period: 20s
 
+  # Initialises the replica set once and waits until it has a primary, then exits
   mongo-init:
     image: mongo:8
     restart: "no"
@@ -31,6 +32,9 @@ services:
         while (!db.hello().isWritablePrimary) { sleep(500); }
         print('Replica set ready');
 
+  # Fills the database with the demo users, gigs, bookings and transactions.
+  # Runs once after MongoDB is healthy and then exits. Note: it clears existing
+  # data first, so every "docker compose up" starts from the same demo data.
   seed:
     build: ./backend
     command: ["node", "scripts/seed.js"]
@@ -56,6 +60,7 @@ services:
       JWT_EXPIRES_IN: 1h
       MONGODB_URI: ${MONGODB_URI:-mongodb://mongo:27017/hustlehub?replicaSet=rs0}
       FRONTEND_URL: http://localhost:8080
+      # Rate limits can be raised for automated test runs (for example Newman in CI)
       AUTH_RATE_LIMIT: ${AUTH_RATE_LIMIT:-10}
       BOOKING_RATE_LIMIT: ${BOOKING_RATE_LIMIT:-5}
       API_RATE_LIMIT: ${API_RATE_LIMIT:-300}
@@ -90,6 +95,7 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    # The Nginx Alpine image has wget but not curl
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:80/"]
       interval: 10s
