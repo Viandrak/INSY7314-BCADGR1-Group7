@@ -1,0 +1,22 @@
+# OWASP ZAP baseline scan rules for the HustleHub+ frontend (running in Docker).
+#
+# Format: rule ID <TAB> action <TAB> comment. These lines MUST be separated by
+# real tab characters, not spaces.
+#
+# Failure threshold: every Medium and High risk passive rule is set to FAIL, so a
+# finding fails the pipeline. Every other rule (Low and Informational risk) keeps
+# the ZAP default of WARN, which is reported but does not fail the job.
+10020	FAIL	Missing Anti-clickjacking Header (Medium)
+10038	FAIL	Content Security Policy (CSP) Header Not Set (Medium)
+10055	FAIL	CSP: wildcard, unsafe-inline or other weak directive (Medium)
+90003	FAIL	Sub Resource Integrity Attribute Missing (Medium)
+10098	FAIL	Cross-Domain Misconfiguration (Medium)
+10003	FAIL	Vulnerable JS Library (Medium or High)
+10040	FAIL	Secure Pages Include Mixed Content (Medium)
+10033	FAIL	Directory Browsing (Medium)
+10028	FAIL	Open Redirect (Medium)
+10108	FAIL	Reverse Tabnabbing (Medium)
+90022	FAIL	Application Error Disclosure (Medium)
+10062	FAIL	PII Disclosure (High)
+10045	FAIL	Source Code Disclosure - /WEB-INF folder (High)
+10105	FAIL	Weak Authentication Method (High)
