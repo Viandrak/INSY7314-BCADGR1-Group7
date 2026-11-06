@@ -14,12 +14,19 @@ vi.mock('../api/gigs', () => ({
 vi.mock('../api/bookings', () => ({ fetchReceivedBookings: vi.fn().mockResolvedValue([]) }));
 vi.mock('../api/income', () => ({
   fetchIncomeSummary: vi.fn().mockResolvedValue({
-    totalIncome: 0,
+    currency: 'ZAR',
     transactionCount: 0,
-    estimatedTaxRate: 0.18,
+    taxYear: '2026/27',
+    grossIncome: 0,
+    expensesUsed: 0,
+    taxableIncome: 0,
     estimatedTax: 0,
-    incomeAfterEstimatedTax: 0,
-    disclaimer: '',
+    effectiveTaxRate: 0,
+    taxBracket: { number: 1, marginalRate: 0.18, from: 0, to: 245100 },
+    incomeAfterTax: 0,
+    assumptions: ['The tax year is 2026/27 (1 March 2026 to 28 February 2027).'],
+    incomePerMonth: [],
+    incomePerGig: [],
   }),
 }));
 
@@ -101,5 +108,17 @@ describe('FreelancerDashboardPage editing a gig', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Invalid gig details.');
     expect(screen.getByRole('button', { name: /save changes/i })).toBeInTheDocument();
+  });
+
+  
+  it('shows the Income & Tax tab with the estimate and expenses input', async () => {
+    const user = userEvent.setup();
+    render(<FreelancerDashboardPage />);
+
+    await user.click(await screen.findByRole('button', { name: 'Income & Tax' }));
+
+    expect(screen.getByText(/illustrative estimate for the 2026\/27 tax year/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/estimated business expenses/i)).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: /how we estimate your tax/i })).toBeInTheDocument();
   });
 });

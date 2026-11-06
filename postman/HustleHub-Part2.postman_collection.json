@@ -1069,7 +1069,8 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));",
+                  "pm.test('403 comes from the ownership check', () => pm.expect(pm.response.json().message).to.eql('You can only update your own gigs.'));"
                 ]
               }
             }
@@ -1162,7 +1163,8 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));",
+                  "pm.test('403 comes from the ownership check', () => pm.expect(pm.response.json().message).to.eql('You can only delete your own gigs.'));"
                 ]
               }
             }
@@ -1553,17 +1555,23 @@
       "name": "Income",
       "item": [
         {
-          "name": "Get Income Summary - Success (freelancer1)",
+          "name": "Get Income Summary - Success (freelancer1, tax estimate fields)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-                  "const json = pm.response.json();",
-                  "pm.test('totalIncome is a number', () => pm.expect(json.income.totalIncome).to.be.a('number'));",
-                  "pm.test('estimatedTax is a number', () => pm.expect(json.income.estimatedTax).to.be.a('number'));",
-                  "pm.test('estimatedTaxRate is present', () => pm.expect(json.income.estimatedTaxRate).to.be.a('number'));"
+                  "const income = pm.response.json().income;",
+                  "pm.test('tax year is 2026/27', () => pm.expect(income.taxYear).to.eql('2026/27'));",
+                  "pm.test('grossIncome is a number', () => pm.expect(income.grossIncome).to.be.a('number'));",
+                  "pm.test('expensesUsed defaults to 0', () => pm.expect(income.expensesUsed).to.eql(0));",
+                  "pm.test('taxableIncome equals grossIncome when there are no expenses', () => pm.expect(income.taxableIncome).to.eql(income.grossIncome));",
+                  "pm.test('estimatedTax, effectiveTaxRate and incomeAfterTax are numbers', () => { pm.expect(income.estimatedTax).to.be.a('number'); pm.expect(income.effectiveTaxRate).to.be.a('number'); pm.expect(income.incomeAfterTax).to.be.a('number'); });",
+                  "pm.test('tax bracket is returned', () => pm.expect(income.taxBracket.number).to.be.within(1, 7));",
+                  "pm.test('assumptions are listed', () => pm.expect(income.assumptions).to.be.an('array').that.is.not.empty);",
+                  "pm.test('result is described as an illustrative estimate', () => pm.expect(income.disclaimer).to.include('illustrative estimate'));",
+                  "pm.test('old flat rate field is gone', () => pm.expect(income).to.not.have.property('estimatedTaxRate'));"
                 ]
               }
             }
@@ -1577,6 +1585,177 @@
               }
             ],
             "url": "{{baseUrl}}/api/income/summary"
+          }
+        },
+        {
+          "name": "Get Income Summary - Income Per Month and Per Gig",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const income = pm.response.json().income;",
+                  "pm.test('incomePerMonth has 12 months (March 2026 to February 2027)', () => { pm.expect(income.incomePerMonth).to.have.lengthOf(12); pm.expect(income.incomePerMonth[0].month).to.eql('2026-03'); pm.expect(income.incomePerMonth[11].month).to.eql('2027-02'); });",
+                  "pm.test('monthly income adds up to grossIncome', () => { const total = income.incomePerMonth.reduce((sum, m) => sum + m.income, 0); pm.expect(Math.round(total * 100) / 100).to.eql(income.grossIncome); });",
+                  "pm.test('incomePerGig is an array', () => pm.expect(income.incomePerGig).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{freelancerToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/income/summary"
+          }
+        },
+        {
+          "name": "Get Income Summary - With Business Expenses",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const income = pm.response.json().income;",
+                  "pm.test('expensesUsed is 5000', () => pm.expect(income.expensesUsed).to.eql(5000));",
+                  "pm.test('taxableIncome is gross income minus expenses, never below 0', () => pm.expect(income.taxableIncome).to.eql(Math.max(Math.round((income.grossIncome - 5000) * 100) / 100, 0)));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{freelancerToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/income/summary?expenses=5000"
+          }
+        },
+        {
+          "name": "Get Income Summary - Expenses Greater Than Income (taxable income 0)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const income = pm.response.json().income;",
+                  "pm.test('taxableIncome is 0, not negative', () => pm.expect(income.taxableIncome).to.eql(0));",
+                  "pm.test('estimatedTax is 0', () => pm.expect(income.estimatedTax).to.eql(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{freelancerToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/income/summary?expenses=100000000"
+          }
+        },
+        {
+          "name": "Get Income Summary - Negative Expenses Rejected (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{freelancerToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/income/summary?expenses=-5"
+          }
+        },
+        {
+          "name": "Get Income Summary - Text Expenses Rejected (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{freelancerToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/income/summary?expenses=abc"
+          }
+        },
+        {
+          "name": "Get Income Summary - Exponent Expenses Rejected (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{freelancerToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/income/summary?expenses=1e5"
+          }
+        },
+        {
+          "name": "Get Income Summary - Expenses Above Maximum Rejected (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{freelancerToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/income/summary?expenses=100000001"
           }
         },
         {
@@ -1952,7 +2131,7 @@
               "script": {
                 "exec": [
                   "pm.test('Status is 200 or 204', () => pm.expect([200,204]).to.include(pm.response.code));",
-                  "pm.test('Access-Control-Allow-Origin matches frontend', () => pm.expect(pm.response.headers.get('Access-Control-Allow-Origin')).to.eql('http://localhost:5173'));"
+                  "pm.test('Access-Control-Allow-Origin matches frontend', () => pm.expect(pm.response.headers.get('Access-Control-Allow-Origin')).to.eql(pm.variables.get('frontendUrl')));"
                 ]
               }
             }
@@ -1962,7 +2141,7 @@
             "header": [
               {
                 "key": "Origin",
-                "value": "http://localhost:5173"
+                "value": "{{frontendUrl}}"
               },
               {
                 "key": "Access-Control-Request-Method",
@@ -1979,6 +2158,10 @@
     {
       "key": "baseUrl",
       "value": "https://localhost:5000"
+    },
+    {
+      "key": "frontendUrl",
+      "value": "http://localhost:5173"
     },
     {
       "key": "seedPassword",

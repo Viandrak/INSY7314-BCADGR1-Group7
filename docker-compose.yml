@@ -1,0 +1,107 @@
+name: hustlehub
+
+services:
+  mongo:
+    image: mongo:7.0
+    restart: unless-stopped
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--host", "127.0.0.1", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+
+  # Initialises the replica set once and waits until it has a primary, then exits
+  mongo-init:
+    image: mongo:7.0
+    restart: "no"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    entrypoint:
+      - mongosh
+      - --host
+      - mongo
+      - --quiet
+      - --eval
+      - |
+        try { rs.status(); } catch (e) { rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'mongo:27017' }] }); }
+        while (!db.hello().isWritablePrimary) { sleep(500); }
+        print('Replica set ready');
+
+  # Fills the database with the demo users, gigs, bookings and transactions.
+  # Runs once after MongoDB is healthy and then exits. Note: it clears existing
+  # data first, so every "docker compose up" starts from the same demo data.
+  seed:
+    build: ./backend
+    command: ["node", "scripts/seed.js"]
+    restart: "no"
+    environment:
+      NODE_ENV: development # the seed script refuses to run in production
+      MONGODB_URI: ${MONGODB_URI:-mongodb://mongo:27017/hustlehub?replicaSet=rs0}
+      SEED_PASSWORD: ${SEED_PASSWORD:?Set SEED_PASSWORD}
+    depends_on:
+      mongo:
+        condition: service_healthy
+      mongo-init:
+        condition: service_completed_successfully
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      USE_HTTPS: ${USE_HTTPS:-false} # no certificates inside the container
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+      JWT_EXPIRES_IN: 1h
+      MONGODB_URI: ${MONGODB_URI:-mongodb://mongo:27017/hustlehub?replicaSet=rs0}
+      FRONTEND_URL: http://localhost:8080
+      # Rate limits can be raised for automated test runs (for example Newman in CI)
+      AUTH_RATE_LIMIT: ${AUTH_RATE_LIMIT:-10}
+      BOOKING_RATE_LIMIT: ${BOOKING_RATE_LIMIT:-5}
+      API_RATE_LIMIT: ${API_RATE_LIMIT:-300}
+    ports:
+      - "5000:5000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      mongo-init:
+        condition: service_completed_successfully
+      seed:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:5000/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:5000/api}
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    # The Nginx Alpine image has wget but not curl
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:80/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+volumes:
+  mongo-data:

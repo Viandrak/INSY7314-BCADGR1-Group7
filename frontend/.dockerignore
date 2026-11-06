@@ -1,0 +1,21 @@
+# Dependencies and build output are created inside the image
+node_modules
+dist
+
+# Local settings and secrets
+.env
+*.env
+.env.*
+
+# Not needed to build the app
+README.md
+eslint.config.js
+**/*.test.js
+**/*.test.jsx
+src/test
+
+# Docker and Git files
+Dockerfile
+.dockerignore
+.git
+.gitignore

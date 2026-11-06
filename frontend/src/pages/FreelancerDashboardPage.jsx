@@ -3,6 +3,7 @@ import { fetchMyGigs, createGig, updateGig, deleteGig } from '../api/gigs';
 import { fetchReceivedBookings } from '../api/bookings';
 import { fetchIncomeSummary } from '../api/income';
 import GigForm from '../components/GigForm';
+import IncomeTaxTab from '../components/IncomeTaxTab';
 
 function FreelancerDashboardPage() {
   const [tab, setTab] = useState('gigs');
@@ -83,7 +84,7 @@ function FreelancerDashboardPage() {
       <div className="tabs">
         <button onClick={() => setTab('gigs')} className={tab === 'gigs' ? 'active' : ''}>My Gigs</button>
         <button onClick={() => setTab('bookings')} className={tab === 'bookings' ? 'active' : ''}>Bookings Received</button>
-        <button onClick={() => setTab('income')} className={tab === 'income' ? 'active' : ''}>Income</button>
+        <button onClick={() => setTab('income')} className={tab === 'income' ? 'active' : ''}>Income & Tax</button>
       </div>
 
       {error && <p className="error-message" role="alert">{error}</p>}
@@ -139,15 +140,7 @@ function FreelancerDashboardPage() {
         </div>
       )}
 
-      {tab === 'income' && income && (
-        <div className="income-summary">
-          <p>Total income: <strong>R{income.totalIncome}</strong></p>
-          <p>Transactions: {income.transactionCount}</p>
-          <p>Estimated tax ({(income.estimatedTaxRate * 100).toFixed(0)}%): R{income.estimatedTax}</p>
-          <p>Income after estimated tax: <strong>R{income.incomeAfterEstimatedTax}</strong></p>
-          <p className="hint">{income.disclaimer}</p>
-        </div>
-      )}
+            {tab === 'income' && income && <IncomeTaxTab initialIncome={income} />}
     </div>
   );
 }

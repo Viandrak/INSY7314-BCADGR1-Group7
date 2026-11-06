@@ -74,10 +74,10 @@ const main = [
     q('Get Gig By ID - Invalid ID Format (400)','GET','/api/gigs/not-a-valid-id',{t:'clientToken',c:400}),
     q('Get Gig By ID - Not Found (404)','GET','/api/gigs/000000000000000000000000',{t:'clientToken',c:404}),
     q('Update Gig - Success (freelancer1, own gig)','PATCH','/api/gigs/{{gigId}}',{b:{price:600},t:'freelancerToken',c:200}),
-    q('Update Gig - Not Owner (freelancer2 tries, 403)','PATCH','/api/gigs/{{gigId}}',{b:{price:1},t:'freelancer2Token',c:403}),
+    q('Update Gig - Not Owner (freelancer2 tries, 403)','PATCH','/api/gigs/{{gigId}}',{b:{price:1},t:'freelancer2Token',c:403,x:["pm.test('403 comes from the ownership check', () => pm.expect(pm.response.json().message).to.eql('You can only update your own gigs.'));"]}),
     q('Update Gig - Unexpected Field Rejected','PATCH','/api/gigs/{{gigId}}',{b:{freelancer:'000000000000000000000000'},t:'freelancerToken',c:400}),
     q('Update Gig - Invalid ID Format (400)','PATCH','/api/gigs/not-a-valid-id',{b:{price:100},t:'freelancerToken',c:400}),
-    q('Delete Gig - Not Owner (freelancer2 tries, 403)','DELETE','/api/gigs/{{gigId}}',{t:'freelancer2Token',c:403}),
+    q('Delete Gig - Not Owner (freelancer2 tries, 403)','DELETE','/api/gigs/{{gigId}}',{t:'freelancer2Token',c:403,x:["pm.test('403 comes from the ownership check', () => pm.expect(pm.response.json().message).to.eql('You can only delete your own gigs.'));"]}),
     q('Delete Gig - Success (freelancer1 deletes throwaway gig)','DELETE','/api/gigs/{{gigToDeleteId}}',{t:'freelancerToken',c:200})
   ]],
   ['Bookings', [
@@ -95,7 +95,14 @@ const main = [
     q('Get Received Bookings - As Client (RBAC 403)','GET','/api/bookings/received',{t:'clientToken',c:403})
   ]],
   ['Income', [
-    q('Get Income Summary - Success (freelancer1)','GET','/api/income/summary',{t:'freelancerToken',c:200,x:["const json = pm.response.json();","pm.test('totalIncome is a number', () => pm.expect(json.income.totalIncome).to.be.a('number'));","pm.test('estimatedTax is a number', () => pm.expect(json.income.estimatedTax).to.be.a('number'));","pm.test('estimatedTaxRate is present', () => pm.expect(json.income.estimatedTaxRate).to.be.a('number'));"]}),
+    q('Get Income Summary - Success (freelancer1, tax estimate fields)','GET','/api/income/summary',{t:'freelancerToken',c:200,x:["const income = pm.response.json().income;","pm.test('tax year is 2026/27', () => pm.expect(income.taxYear).to.eql('2026/27'));","pm.test('grossIncome is a number', () => pm.expect(income.grossIncome).to.be.a('number'));","pm.test('expensesUsed defaults to 0', () => pm.expect(income.expensesUsed).to.eql(0));","pm.test('taxableIncome equals grossIncome when there are no expenses', () => pm.expect(income.taxableIncome).to.eql(income.grossIncome));","pm.test('estimatedTax, effectiveTaxRate and incomeAfterTax are numbers', () => { pm.expect(income.estimatedTax).to.be.a('number'); pm.expect(income.effectiveTaxRate).to.be.a('number'); pm.expect(income.incomeAfterTax).to.be.a('number'); });","pm.test('tax bracket is returned', () => pm.expect(income.taxBracket.number).to.be.within(1, 7));","pm.test('assumptions are listed', () => pm.expect(income.assumptions).to.be.an('array').that.is.not.empty);","pm.test('result is described as an illustrative estimate', () => pm.expect(income.disclaimer).to.include('illustrative estimate'));","pm.test('old flat rate field is gone', () => pm.expect(income).to.not.have.property('estimatedTaxRate'));"]}),
+    q('Get Income Summary - Income Per Month and Per Gig','GET','/api/income/summary',{t:'freelancerToken',c:200,x:["const income = pm.response.json().income;","pm.test('incomePerMonth has 12 months (March 2026 to February 2027)', () => { pm.expect(income.incomePerMonth).to.have.lengthOf(12); pm.expect(income.incomePerMonth[0].month).to.eql('2026-03'); pm.expect(income.incomePerMonth[11].month).to.eql('2027-02'); });","pm.test('monthly income adds up to grossIncome', () => { const total = income.incomePerMonth.reduce((sum, m) => sum + m.income, 0); pm.expect(Math.round(total * 100) / 100).to.eql(income.grossIncome); });","pm.test('incomePerGig is an array', () => pm.expect(income.incomePerGig).to.be.an('array'));"]}),
+    q('Get Income Summary - With Business Expenses','GET','/api/income/summary?expenses=5000',{t:'freelancerToken',c:200,x:["const income = pm.response.json().income;","pm.test('expensesUsed is 5000', () => pm.expect(income.expensesUsed).to.eql(5000));","pm.test('taxableIncome is gross income minus expenses, never below 0', () => pm.expect(income.taxableIncome).to.eql(Math.max(Math.round((income.grossIncome - 5000) * 100) / 100, 0)));"]}),
+    q('Get Income Summary - Expenses Greater Than Income (taxable income 0)','GET','/api/income/summary?expenses=100000000',{t:'freelancerToken',c:200,x:["const income = pm.response.json().income;","pm.test('taxableIncome is 0, not negative', () => pm.expect(income.taxableIncome).to.eql(0));","pm.test('estimatedTax is 0', () => pm.expect(income.estimatedTax).to.eql(0));"]}),
+    q('Get Income Summary - Negative Expenses Rejected (400)','GET','/api/income/summary?expenses=-5',{t:'freelancerToken',c:400}),
+    q('Get Income Summary - Text Expenses Rejected (400)','GET','/api/income/summary?expenses=abc',{t:'freelancerToken',c:400}),
+    q('Get Income Summary - Exponent Expenses Rejected (400)','GET','/api/income/summary?expenses=1e5',{t:'freelancerToken',c:400}),
+    q('Get Income Summary - Expenses Above Maximum Rejected (400)','GET','/api/income/summary?expenses=100000001',{t:'freelancerToken',c:400}),
     q('Get Income Summary - As Client (RBAC 403)','GET','/api/income/summary',{t:'clientToken',c:403}),
     q('Get Income Summary - No Token (401)','GET','/api/income/summary',{c:401}),
     q('Get Income Summary - Invalid Token (401)','GET','/api/income/summary',{h:[{key:'Authorization',value:'Bearer not-a-real-token'}],c:401})
@@ -116,7 +123,7 @@ const main = [
   ['Security Headers', [
     q('Security Headers - Present on Public Route (health check)','GET','/',{c:200,x:["pm.test('Has Content-Security-Policy header', () => pm.expect(pm.response.headers.has('Content-Security-Policy')).to.be.true);","pm.test('Has X-Content-Type-Options header', () => pm.expect(pm.response.headers.has('X-Content-Type-Options')).to.be.true);","pm.test('X-Content-Type-Options is nosniff', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));","pm.test('Does not expose X-Powered-By', () => pm.expect(pm.response.headers.has('X-Powered-By')).to.be.false);"]}),
     q('Security Headers - Present on Protected Route (gigs)','GET','/api/gigs',{t:'clientToken',c:200,x:["pm.test('Has Content-Security-Policy header', () => pm.expect(pm.response.headers.has('Content-Security-Policy')).to.be.true);","pm.test('CSP default-src is self', () => pm.expect(pm.response.headers.get('Content-Security-Policy')).to.include(\"default-src 'self'\"));","pm.test('Has X-Frame-Options or frame-ancestors directive', () => { const csp = pm.response.headers.get('Content-Security-Policy'); const xfo = pm.response.headers.has('X-Frame-Options'); pm.expect(xfo || (csp && csp.includes('frame-ancestors'))).to.be.true; });"]}),
-    q('Security Headers - CORS Origin Restricted','OPTIONS','/api/gigs',{h:[{key:'Origin',value:'http://localhost:5173'},{key:'Access-Control-Request-Method',value:'GET'}],tests:["pm.test('Status is 200 or 204', () => pm.expect([200,204]).to.include(pm.response.code));","pm.test('Access-Control-Allow-Origin matches frontend', () => pm.expect(pm.response.headers.get('Access-Control-Allow-Origin')).to.eql('http://localhost:5173'));"]})
+    q('Security Headers - CORS Origin Restricted','OPTIONS','/api/gigs',{h:[{key:'Origin',value:'{{frontendUrl}}'},{key:'Access-Control-Request-Method',value:'GET'}],tests:["pm.test('Status is 200 or 204', () => pm.expect([200,204]).to.include(pm.response.code));","pm.test('Access-Control-Allow-Origin matches frontend', () => pm.expect(pm.response.headers.get('Access-Control-Allow-Origin')).to.eql(pm.variables.get('frontendUrl')));"]})
   ]]
 ];
 
@@ -126,7 +133,7 @@ save(
   'Part 2 backend tests: Auth, Gigs, Bookings, Income, RBAC/Admin, Security Headers.',
   main.map(([name, item]) => ({ name, item })),
   vars({
-    baseUrl: 'https://localhost:5000', seedPassword: '', randomEmail: '',
+    baseUrl: 'https://localhost:5000', frontendUrl: 'http://localhost:5173', seedPassword: '', randomEmail: '',
     freelancerToken: '', freelancer2Token: '', clientToken: '', client2Token: '', adminToken: '',
     freelancerId: '', gigId: '', gigToDeleteId: '', bookingId: '',
   })

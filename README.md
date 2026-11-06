@@ -64,8 +64,8 @@ Because the platform processes sensitive information — user credentials, trans
 |------|--------|--------|
 | **Gig management** | Freelancers could create and delete gigs | Freelancers can also **edit** their gigs from the dashboard *(Part 2 feedback)* |
 | **CI/CD** | None | GitHub Actions pipeline that tests, lints, builds and security-scans the backend and frontend on every push |
-| **Backend tests** | Postman and Newman only | 127 automated Jest tests that run without a database, plus the existing Postman collections |
-| **Frontend tests** | 14 tests | 29 tests, including the edit gig flow and protected browse routes |
+| **Backend tests** | Postman and Newman only | 192 automated Jest tests that run without a database, plus the existing Postman collections |
+| **Frontend tests** | 14 tests | 64 tests, including the edit gig flow and protected browse routes |
 | **Static analysis** | None | CodeQL (security-extended queries) and ESLint with `eslint-plugin-security` |
 | **Dependency security** | Not checked | `npm audit` on both apps; all critical, high and moderate vulnerabilities fixed |
 | **Secret scanning** | Not checked | Gitleaks on every push, plus a scan of the full git history |
@@ -74,9 +74,11 @@ Because the platform processes sensitive information — user credentials, trans
 | **Browse pages** | Shown to logged-out visitors, who then saw an API error | Require a login, matching the API, with a message on the login page |
 | **Code structure** | Express app and server start-up in one file | `app.js` builds the app and `server.js` starts it, so tests can load the app without MongoDB or certificates |
 | **Frontend code quality** | 5 existing lint errors | Lint is clean; the saved session is read once on load, and corrupted saved data no longer crashes the app |
+| **Tax estimate** | A flat 18% of income | The SARS 2026/27 tax brackets and primary rebate, with business expenses entered by the freelancer. See [Tax calculation](#tax-calculation) |
+| **Income & Tax dashboard** | One income summary | A tab with summary cards, a monthly income chart, an income vs tax chart, an expenses input and a "How we estimate your tax" panel |
+| **Docker** | Run locally only | The whole stack (MongoDB, backend, frontend) runs with `docker compose up --build`, with health checks, a start order and a non-root backend. See [Docker](#docker) |
+| **Frontend fonts** | Loaded from Google Fonts | Served from the app itself, so the page loads nothing from third parties and its Content Security Policy can stay strict |
 
-> ✏️ **KAITLYN:** add rows for the tax calculation (SARS 2026/27 brackets, expenses), the Income & Tax dashboard and Docker.
->
 > ✏️ **NIKKITA:** add rows for logging, account lockout, the security audit log and JWT revocation.
 
 > [!NOTE]
@@ -96,12 +98,10 @@ Because the platform processes sensitive information — user credentials, trans
 - Booking a gig with a simulated confirmation reference (no real payment is processed)
 - Automatic transaction record for every booking, linked to both the client and the freelancer
 - Booking history for clients (bookings made) and freelancers (bookings received)
-- Income summary for freelancers, including an estimated tax figure
+- Income summary for freelancers with an illustrative tax estimate based on the SARS 2026/27 tax brackets, the business expenses the freelancer enters, and income per month and per gig
 - Rate limiting on every API route, with stricter limits on authentication and booking
 - Seed script that creates demo accounts, gigs, bookings and transactions
 
-> ✏️ **KAITLYN:** update the income bullet for the new tax calculation and expenses.
->
 > ✏️ **NIKKITA:** add bullets for logging, account lockout, the audit log and logout with token revocation.
 
 ### Frontend
@@ -111,11 +111,9 @@ Because the platform processes sensitive information — user credentials, trans
 - Gig browsing with an optional category filter, and a gig detail page — both require a login, and logged-out visitors are told *"Please log in or register to browse gigs."*
 - A one-click booking flow with a simulated confirmation screen showing the booking reference and amount
 - A client bookings page showing booking history
-- A freelancer dashboard with three tabs: my gigs (create, **edit** and delete), bookings received, and an income summary with the estimated tax figure
+- A freelancer dashboard with three tabs: my gigs (create, **edit** and delete), bookings received, and an **Income & Tax** tab (summary cards, a monthly income chart, an income vs tax chart, a business expenses input and an explanation of the estimate)
 - An admin page with tables for all users, all gigs and all bookings
 - Invalid input is caught before a request is sent (e.g. a gig price must be a positive number, a title must be at least 3 characters), and every API error is shown as a plain, user-facing message — raw server errors, stack traces and status codes are never displayed in the UI
-
-> ✏️ **KAITLYN:** update the income tab bullet for the Income & Tax dashboard and its charts.
 
 ---
 
@@ -146,7 +144,7 @@ The React frontend communicates with the Express backend using a REST API with J
 
 All security-relevant logic sits inside the backend's **trust boundary**, before any data reaches the database. A trust boundary marks the point where data crosses from a less trusted context (the client) into a more trusted, controlled one (the server). Anything that arrives from the client — request bodies, URL parameters, query strings and tokens — is treated as untrusted until the backend has verified it.
 
-> ✏️ **KAITLYN:** add a short note on how the stack runs in Docker (MongoDB, backend and frontend containers).
+**Running in Docker.** The same system can run with Docker Compose as four containers: MongoDB (a one-member replica set, which booking transactions need), a one-off seed step, the Express backend and the Nginx frontend. The browser loads the app from the frontend on port 8080 and calls the API directly on port 5000. MongoDB is only reachable from the other containers. See [Docker](#docker).
 
 ---
 
@@ -175,9 +173,12 @@ All security-relevant logic sits inside the backend's **trust boundary**, before
 | Prototype pollution protection in the sanitiser (found by CodeQL) | Part 3 |
 | General rate limit on every API route (found by CodeQL) | Part 3 |
 | Automated security tests, linting, dependency audit, secret scanning and static analysis on every push | Part 3 |
+| Tax estimate input (business expenses) validated on both the frontend and the backend, and rejected before any database work | Part 3 |
+| Backend container runs as a non-root user with production dependencies only, and no secrets are baked into any image | Part 3 |
+| Security headers on the frontend Nginx server (Content Security Policy, clickjacking and MIME-sniffing protection) | Part 3 |
+| OWASP ZAP baseline scan of the running frontend that fails the pipeline on medium and high risk findings | Part 3 |
 
-> ✏️ **KAITLYN:** add rows for Docker (non-root containers) and security headers on the frontend Nginx server.
->
+
 > ✏️ **NIKKITA:** add rows for account lockout, admin unlock, the security audit log, JWT revocation on logout and cloud logging.
 
 ---
@@ -365,8 +366,7 @@ Controllers never pass the request body straight into the database.
 - **Atomic creation.** A booking and its transaction are saved inside a single MongoDB transaction — either both are saved or neither is — so a booking can never exist without its financial record.
 - **Simulated confirmation.** Each booking receives a random, unguessable reference (e.g. `HH-7F3A9C21`) generated with Node's `crypto` module. No real payment is processed, as permitted by the brief.
 - **Income tracking.** The income summary totals only the logged-in freelancer's `completed` transactions using a database aggregation.
-
-> ✏️ **KAITLYN:** describe the estimated tax here, or link to [Tax calculation](#tax-calculation). The Part 2 flat 18% rate is replaced in Part 3.
+- **Estimated tax.** The income summary also returns an illustrative tax estimate calculated from that income, the business expenses the freelancer enters and the SARS 2026/27 tax brackets. It replaces the flat 18% rate used in Part 2. See [Tax calculation](#tax-calculation).
 
 ### Rate limiting
 
@@ -396,7 +396,7 @@ Rate limiting is applied with `express-rate-limit`. Every API route has a genera
 > [!NOTE]
 > The limits are counted per client IP address. The app does not set Express's `trust proxy` option, which is correct while the browser calls the API directly.
 >
-> ✏️ **KAITLYN:** if the Docker setup puts Nginx in front of the API, every user would appear as the Nginx container's IP and share one limit. In that case, set `app.set('trust proxy', 1)` (exactly one trusted proxy, never `true`) and note it here.
+> In Docker the browser still calls the API directly on port 5000. The Nginx container only serves the React files and has no proxy in front of the API, so every user keeps their own IP address and `trust proxy` stays unset.
 
 ### Input validation and sanitisation
 
@@ -472,7 +472,15 @@ Helmet sets security headers on every API response, including a `Content-Securit
 
 **CORS** only allows the origin in `FRONTEND_URL` (default `http://localhost:5173`), and the Postman collection checks this.
 
-> ✏️ **KAITLYN:** add the security headers set by the frontend Nginx server (for example `Content-Security-Policy` and `X-Content-Type-Options`). Until then, the React pages have no Content Security Policy of their own.
+**Frontend headers (Nginx).** The React app is served by Nginx (`frontend/nginx.conf`), which adds its own security headers to every response, so the pages have a Content Security Policy of their own:
+- `Content-Security-Policy`: scripts, styles, fonts and images may only come from the app's own origin (the only exception is inline style *attributes*, which the charts need). Plugins, framing and other sites' form targets are blocked, and the only other address the page may call is the API on port 5000.
+- `X-Frame-Options: DENY` (and `frame-ancestors 'none'`) stop the app being shown inside another site's frame (clickjacking).
+- `X-Content-Type-Options: nosniff` stops browsers guessing file types.
+- `Referrer-Policy: no-referrer` stops the page address being sent to other sites.
+- `Permissions-Policy` turns off the camera, microphone and location.
+- `Cross-Origin-Opener-Policy` and `Cross-Origin-Resource-Policy` are set to `same-origin`.
+- `server_tokens off` hides the Nginx version.
+The Inter font is bundled with the app instead of loaded from Google Fonts, so the policy does not need to allow any third-party site.
 
 ### Error handling
 
@@ -483,14 +491,83 @@ A centralised error-handling middleware catches any unhandled error, logs it ser
 <a id="tax-calculation"></a>
 ## 🧮 Tax calculation
 
-> ✏️ **KAITLYN:** fill in this section:
-> - the tax year (2026/27, 1 March 2026 to 28 February 2027) and the SARS source
-> - the assumptions: gross income from completed bookings, HustleHub+ as the only taxable income, only the expenses the freelancer enters are deducted, primary rebate only
-> - that the result is an **illustrative estimate** based on these assumptions, not professional tax advice
-> - a step-by-step explanation with one worked example
-> - how expenses are entered and validated
-> - the Income & Tax dashboard and its charts, with a screenshot link
-
+Freelancers see an **illustrative estimate** of the income tax on their HustleHub+ earnings. The calculation is in `backend/src/services/taxService.js` and replaces the flat 18% rate used in Part 2.
+ 
+> [!IMPORTANT]
+> The figure is an illustrative estimate based on the assumptions below. It is not a guaranteed figure, not an upper bound and not professional tax advice. A freelancer's real tax could be higher (for example, if they also earn a salary) or lower (for example, if they have deductions).
+ 
+### Tax year and source
+ 
+The tax year is **2026/27, from 1 March 2026 to 28 February 2027**. The brackets and the primary rebate come from the South African Revenue Service's *Rates of tax for individuals* page (SARS, 2026).
+ 
+### Assumptions
+ 
+The same five assumptions are written in the code, returned by the API and shown on the dashboard:
+ 
+1. The tax year is 2026/27 (1 March 2026 to 28 February 2027).
+2. Income is the gross total of the freelancer's completed bookings in that tax year.
+3. HustleHub+ income is treated as the freelancer's only taxable income.
+4. Only the business expenses the freelancer enters are deducted.
+5. Only the primary rebate (under 65) applies. There are no age rebates, medical credits or provisional tax timing.
+### Tax brackets (SARS 2026/27)
+ 
+| Taxable income (R) | Tax (R) |
+|--------------------|---------|
+| 1 – 245 100 | 18% of taxable income |
+| 245 101 – 383 100 | 44 118 + 26% of the amount above 245 100 |
+| 383 101 – 530 200 | 79 998 + 31% of the amount above 383 100 |
+| 530 201 – 695 800 | 125 599 + 36% of the amount above 530 200 |
+| 695 801 – 887 000 | 185 215 + 39% of the amount above 695 800 |
+| 887 001 – 1 878 600 | 259 783 + 41% of the amount above 887 000 |
+| 1 878 601 and above | 666 339 + 45% of the amount above 1 878 600 |
+ 
+The **primary rebate** of **R17 820** is taken off the tax. The effect is that income up to R99 000 pays no tax.
+ 
+### How the estimate is calculated
+ 
+1. **Gross income.** The backend adds up the logged-in freelancer's `completed` transactions made inside the tax year (South African time). The freelancer's ID comes from the verified token, never from the request.
+2. **Expenses.** The business expenses the freelancer entered are used. If none were entered, they default to R0.
+3. **Taxable income** = gross income − expenses. It is never below R0, so expenses larger than income give a taxable income of R0.
+4. **Find the bracket** that the taxable income falls in. A value exactly on a boundary belongs to the lower bracket.
+5. **Tax before rebate** = the bracket's base amount + its rate × (taxable income − the bracket's starting amount).
+6. **Estimated tax** = tax before rebate − R17 820, and never below R0.
+7. **Effective tax rate** = estimated tax ÷ gross income.
+8. **Income after tax** = gross income − estimated tax. Expenses are not taken off this figure, because they are money the freelancer has already spent.
+### Worked example
+ 
+A freelancer earned **R400 000** from completed bookings and entered **R100 000** of business expenses.
+ 
+| Step | Calculation | Result |
+|------|-------------|--------|
+| Taxable income | 400 000 − 100 000 | R300 000 |
+| Bracket | 245 101 – 383 100 | Bracket 2 (26%) |
+| Tax before rebate | 44 118 + 26% × (300 000 − 245 100) = 44 118 + 14 274 | R58 392 |
+| Estimated tax | 58 392 − 17 820 | **R40 572** |
+| Effective tax rate | 40 572 ÷ 400 000 | **10.14%** |
+| Income after tax | 400 000 − 40 572 | **R359 428** |
+ 
+### Business expenses input
+ 
+The freelancer types their estimated business expenses for the tax year into a box on the Income & Tax tab. The estimate recalculates a moment after they stop typing.
+ 
+- It must be a plain number of **0 or more**, with at most two decimals, and not more than **R100 000 000**. Text, negative numbers, exponents such as `1e5` and anything else are rejected.
+- The input is checked **twice**: in the browser (`frontend/src/utils/expenses.js`), where the freelancer sees a message and nothing is sent, and again in the backend (`parseExpenses()` in `taxService.js`), which answers `400` before any database work.
+### Income & Tax dashboard
+ 
+The **Income & Tax** tab on the freelancer dashboard shows:
+ 
+- six summary cards: gross income, business expenses, taxable income, estimated tax, income after tax and effective tax rate
+- the expenses input described above
+- a **monthly income** bar chart for the 12 months of the tax year (Recharts)
+- an **income vs tax** bar chart comparing gross income, taxable income, estimated tax and income after tax
+- an **income per gig** table
+- a **"How we estimate your tax"** panel with the tax year, the assumptions, the illustrative-estimate wording and the SARS source
+Screenshots: [Income & Tax tab](screenshots/tax-01-income-tax-tab.png), [charts](screenshots/tax-02-charts.png), [expenses entered](screenshots/tax-03-expenses-entered.png) and [How we estimate your tax](screenshots/tax-04-how-we-estimate.png).
+ 
+### Tests
+ 
+The calculation has 34 unit tests (`backend/tests/taxService.test.js`): zero income, income below the tax threshold, every exact bracket boundary, high income, expenses reducing taxable income, expenses greater than income, and invalid expense input. The endpoint has 14 more (`incomeController.test.js`) and the tab has its own frontend tests, including the expenses input (`IncomeTaxTab.test.jsx`).
+ 
 ---
 
 <a id="own-security-features"></a>
@@ -555,9 +632,35 @@ All endpoints are served from `https://localhost:5000`. Protected endpoints requ
 
 | Method | Endpoint | Access | Description |
 |:------:|----------|--------|-------------|
-| ![GET](https://img.shields.io/badge/GET-22C55E?style=flat-square) | `/api/income/summary` | JWT | Total income, transaction count and estimated tax |
+| ![GET](https://img.shields.io/badge/GET-22C55E?style=flat-square) | `/api/income/summary` | JWT · freelancer only | Gross income, expenses, taxable income, estimated tax, effective rate, tax bracket, income after tax, income per month and income per gig |
+ 
+**Query string:** `?expenses=5000` is optional. It is the freelancer's estimated business expenses for the tax year, a number of 0 or more with at most two decimals and not above 100 000 000. It defaults to `0`. Anything else (negative numbers, text, `1e5`, a value that is too large) returns `400`. Clients receive `403` and a missing or invalid token returns `401`.
 
-> ✏️ **KAITLYN:** update this for the new income and tax response, including expenses.
+**Response (shortened):**
+ 
+```json
+{
+  "success": true,
+  "message": "Income summary retrieved successfully.",
+  "income": {
+    "currency": "ZAR",
+    "transactionCount": 4,
+    "taxYear": "2026/27",
+    "grossIncome": 400000,
+    "expensesUsed": 100000,
+    "taxableIncome": 300000,
+    "estimatedTax": 40572,
+    "effectiveTaxRate": 0.1014,
+    "taxBracket": { "number": 2, "marginalRate": 0.26, "from": 245100, "to": 383100 },
+    "primaryRebate": 17820,
+    "incomeAfterTax": 359428,
+    "assumptions": ["The tax year is 2026/27 (1 March 2026 to 28 February 2027).", "..."],
+    "disclaimer": "This is an illustrative estimate based on the stated assumptions, ...",
+    "incomePerMonth": [{ "month": "2026-03", "label": "Mar 2026", "income": 0 }, "... 12 months in total"],
+    "incomePerGig": [{ "gigId": "...", "gigTitle": "Logo Design", "income": 400000, "bookings": 4 }]
+  }
+}
+```
 
 ### 🛠️ Admin
 
@@ -628,7 +731,8 @@ All endpoints are served from `https://localhost:5000`. Protected endpoints requ
 > [!WARNING]
 > A standalone local MongoDB installation is **not** sufficient. Booking creation uses database transactions, which require a replica set. Use a MongoDB Atlas cluster.
 
-> ✏️ **KAITLYN:** add Docker as an alternative way to run the whole stack, and link to [Docker](#docker).
+> [!TIP]
+> **Prefer not to set up Atlas, certificates or Node?** The whole stack can run in Docker instead, with its own MongoDB replica set. See [Docker](#docker).
 
 ### Backend
 
@@ -653,8 +757,7 @@ npm install
 | `FRONTEND_URL` | The frontend's address, allowed by CORS (default `http://localhost:5173`) |
 | `API_RATE_LIMIT` | *Optional.* General requests allowed per IP every 15 minutes (default `300`) |
 
-> ✏️ **KAITLYN:** update or remove `ESTIMATED_TAX_RATE` here and in `.env.example`, depending on the new tax calculation.
->
+The Part 2 `ESTIMATED_TAX_RATE` setting has been removed from `.env.example`: the tax now comes from the SARS brackets in `taxService.js`, so there is no rate to configure.
 > ✏️ **NIKKITA:** add the logging platform's token variable (never commit the real value).
 
 > [!CAUTION]
@@ -707,11 +810,11 @@ The seed also creates 6 gigs across different categories, and 3 bookings, each w
 <br>
 
 - **`querySrv ECONNREFUSED` when connecting to MongoDB:** some Windows networks refuse the DNS lookup that `mongodb+srv://` connection strings need. `src/config/database.js` already sets public DNS servers to work around this, so start the server with `npm start` or `npm run dev`.
-- **`SSL alert number 80` when starting the server:** MongoDB Atlas dropped the first connection. Check your IP is on the Atlas **Network Access** list. If it is, type `rs` to restart nodemon, or try another network (for example a phone hotspot) — some networks interrupt connections to Atlas.
+- **`SSL alert number 80` when starting the server:** MongoDB Atlas dropped the first connection. Check your IP is on the Atlas **Network Access** list. If it is, type `rs` to restart nodemon (the server also retries the connection 3 more times, waiting 1, 2 and 4 seconds, before it gives up, so you may see "Retrying" messages first), or try another network (for example a phone hotspot) — some networks interrupt connections to Atlas.
 - **SSL or certificate errors in Postman:** turn off **SSL certificate verification** in Postman's settings, since Postman does not use the Windows certificate store.
 - **`429 Too Many Requests` while testing:** rate limits are stored in memory, so restarting the server resets them.
-
-> ✏️ **KAITLYN:** if you add a connection retry to `connectDB()`, update the `SSL alert number 80` entry.
+- **`MongoDB connection failed (attempt 1 of 4). Retrying...`:** `connectDB()` retries with a growing wait (1, 2 and 4 seconds) so a slow MongoDB start does not crash the API. This is normal for a few seconds in Docker. If all four attempts fail, the server stops with the real error.
+- **Docker: a service stays `unhealthy` or `docker compose up --wait` fails:** run `docker compose logs <service>` (for example `backend`). A missing `JWT_SECRET` or `SEED_PASSWORD` in the root `.env` is the most common cause. Run `docker compose down --volumes` and try again for a completely clean start.
 
 </details>
 
@@ -747,13 +850,70 @@ The app runs at `http://localhost:5173`. The backend must be running at the same
 <a id="docker"></a>
 ## 🐳 Docker
 
-> ✏️ **KAITLYN:** fill in this section:
-> - the backend and frontend Dockerfiles (non-root user, production dependencies only, multi-stage frontend build served by Nginx)
-> - `docker-compose.yml`: the MongoDB, backend and frontend services, health checks and start order
-> - how to run the stack with `docker compose up --build`
-> - the environment variables needed, and that `.env` is never copied into an image
-> - a screenshot link to `docker compose ps` showing all containers healthy
-
+The whole system can run in containers with one command. Docker Compose starts MongoDB, the API and the frontend, fills the database with demo data, and waits until everything is healthy (Docker, 2026).
+ 
+### The images
+ 
+| Image | What it does |
+|-------|--------------|
+| `backend/Dockerfile` | A small Node.js **Alpine** image. It installs production dependencies only with `npm ci --omit=dev`, so Jest and the other development tools are not in the image. It runs as the non-root `node` user. |
+| `frontend/Dockerfile` | A **multi-stage** build. Stage 1 builds the React app with Vite. Stage 2 is an **Nginx Alpine** image that contains only the built files and `nginx.conf`, with no Node.js and no source code. |
+ 
+Each folder has a `.dockerignore` that keeps `node_modules`, `.env` files, certificates and tests out of the images, so secrets are never copied into an image.
+ 
+### The stack (`docker-compose.yml`)
+ 
+| Service | Purpose | Health check |
+|---------|---------|--------------|
+| `mongo` | MongoDB 7 as a one-member **replica set**. Booking creation uses database transactions, which only work on a replica set. Not published to the host. | `mongosh --eval "db.adminCommand('ping')"` |
+| `mongo-init` | Runs once: initialises the replica set, waits until it has a primary, then exits. | n/a (one-off) |
+| `seed` | Runs once: fills the database with the demo users, gigs, bookings and transactions, then exits. | n/a (one-off) |
+| `backend` | The Express API on port 5000 with `USE_HTTPS=false` (there are no certificates in the container). | Node calls `/health`, which returns `200` only when the database is connected |
+| `frontend` | Nginx serving the React app on port 8080. | `wget` on the Nginx server (the Alpine image has `wget` but not `curl`) |
+ 
+**Start order.** Compose waits for health checks and for one-off services to finish before starting what depends on them (Docker, 2026):
+ 
+```
+mongo (healthy) -> mongo-init (replica set ready) -> seed (finished) -> backend (healthy) -> frontend
+```
+ 
+The backend never runs a database operation before MongoDB is available. `server.js` connects first and only then starts listening, and `connectDB()` retries with a growing wait (1, 2 and 4 seconds) so a slow MongoDB start does not crash it.
+ 
+**Optional HTTPS.** HTTPS is on by default for local development. Setting `USE_HTTPS=false` serves plain HTTP, which is what the container does.
+ 
+### How to run it
+ 
+You need [Docker Desktop](https://www.docker.com/products/docker-desktop/). From the repository root:
+ 
+```
+copy .env.example .env
+```
+ 
+Open `.env` and fill in the two values (use `cp` instead of `copy` on macOS or Linux):
+ 
+| Variable | Meaning |
+|----------|---------|
+| `JWT_SECRET` | A long random value, for example `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` |
+| `SEED_PASSWORD` | The password for the demo accounts (8+ characters, uppercase, lowercase and a number) |
+ 
+Then start the stack:
+ 
+```
+docker compose up --build --wait
+docker compose ps -a
+```
+ 
+Open `http://localhost:8080` and log in with a demo account (for example `freelancer1@hustlehub.com`) and your `SEED_PASSWORD`. Stop the stack with `docker compose down`, or `docker compose down --volumes` to delete the database as well.
+ 
+> [!NOTE]
+> The seed step clears the database first, so every `docker compose up` starts from the same demo data. The real `.env` is never committed or copied into an image. In the pipeline the secrets are created fresh for every run.
+ 
+### Evidence
+ 
+- [`docker compose ps`: every service healthy](screenshots/docker-01-compose-ps.png)
+- [The app running in Docker](screenshots/docker-02-app-running.png)
+The pipeline's **Docker job** starts this same stack and tests it, see [CI/CD pipeline](#cicd-pipeline).
+ 
 ---
 
 <a id="testing"></a>
@@ -771,10 +931,10 @@ The Jest tests do not call the full routes and controllers together (except regi
 
 ### Backend testing (Jest)
 
-The backend has **127 Jest tests in 12 files**, in `backend/tests/`. Each test builds a small Express app containing only the middleware it is testing, so **no database, `.env` file or HTTPS certificate is needed**. A setup file (`tests/setup.js`) gives tests a safe, test-only JWT secret.
+The backend has **192 Jest tests in 17 files**, in `backend/tests/`. Each test builds a small Express app containing only the middleware it is testing, so **no database, `.env` file or HTTPS certificate is needed**. A setup file (`tests/setup.js`) gives tests a safe, test-only JWT secret.
 
 <details>
-<summary><b>🧪 All 12 backend test files</b></summary>
+<summary><b>🧪 All 17 backend test files</b></summary>
 
 <br>
 
@@ -792,6 +952,11 @@ The backend has **127 Jest tests in 12 files**, in `backend/tests/`. Each test b
 | `rbacMiddleware.test.js` | 8 | Allowed and blocked roles, missing users and made-up roles |
 | `errorHandler.test.js` | 6 | `404`, malformed JSON, and no leaking of internal error details |
 | `rateLimit.test.js` | 16 | Login, booking and general API limits, invalid `API_RATE_LIMIT` values, and that the general limit is applied in `app.js` |
+| `taxService.test.js` | 34 | The SARS 2026/27 brackets, every bracket boundary, the primary rebate, expenses reducing taxable income, taxable income never below 0, and invalid expense input |
+| `incomeController.test.js` | 14 | The income summary response, expenses from the query string and their validation (`400`), income for all 12 months and per gig, only the logged-in freelancer's completed transactions in the tax year, and safe error messages |
+| `health.test.js` | 3 | `/health` returns `200` when the database is connected and `503` when it is not, and is not blocked by the rate limiter |
+| `database.test.js` | 5 | `connectDB()` retries with exponential backoff, throws when the retries run out, and fails fast without a connection string |
+| `createServer.test.js` | 9 | `USE_HTTPS=false` gives a plain HTTP server with no certificates, and HTTPS mode loads the certificates |
 
 </details>
 
@@ -808,10 +973,10 @@ npm run lint
 
 Frontend tests use **Vitest** with **React Testing Library**, which renders components in a simulated browser (jsdom) and queries them the way a person would — by label, role and visible text — rather than by implementation detail. The API is mocked in every test, so tests run without a live backend or database and never make real network calls.
 
-There are **29 tests in 7 files**:
+There are **64 tests in 9 files**:
 
 <details>
-<summary><b>🧪 All 7 frontend test files</b></summary>
+<summary><b>🧪 All 9 frontend test files</b></summary>
 
 <br>
 
@@ -819,11 +984,13 @@ There are **29 tests in 7 files**:
 |-----------|:-----:|----------------|
 | `GigForm.test.jsx` | 4 | Form fields, invalid input and submitted values |
 | `GigFormEdit.test.jsx` | 6 | Editing: fields filled with the gig's details, edited values submitted, validation, error messages and Cancel |
-| `FreelancerDashboardPage.test.jsx` | 5 | The Edit button, the filled form, `updateGig` called with the right gig ID, the success message and list refresh, Cancel, and a failed update keeping the form open |
+| `FreelancerDashboardPage.test.jsx` | 6 | The Edit button, the filled form, `updateGig` called with the right gig ID, the success message and list refresh, Cancel, a failed update keeping the form open, and the Income & Tax tab |
 | `AppRoutes.test.jsx` | 4 | Logged-out visitors sent to the login page (with a message) for Browse Gigs and gig pages, without calling the API |
 | `LoginPage.test.jsx` | 4 | The login form, typing, invalid credentials and the API call |
 | `RegisterPage.test.jsx` | 3 | The role selector, duplicate email and successful registration |
 | `Navbar.test.jsx` | 3 | Links shown when logged out, and for a freelancer and an admin |
+| `IncomeTaxTab.test.jsx` | 14 | The six summary cards, both charts (12 months), income per gig, the "How we estimate your tax" panel, the empty state, and the expenses input: recalculating, rejecting text, negative and too-large values without calling the API, and API errors |
+| `utils.test.js` | 20 | The expenses validation rules and the rand and percentage formatting |
 
 </details>
 
@@ -842,7 +1009,7 @@ The backend API is also tested with three Postman collections in `postman/`, gen
 
 | Collection | Requests | Assertions |
 |------------|:--------:|:----------:|
-| `HustleHub-Part2` (main) | 72 | 92 |
+| `HustleHub-Part2` (main) | 79 | 114 |
 | `HustleHub-Part2-LoginRateLimit` | 11 | 13 |
 | `HustleHub-Part2-BookingRateLimit` | 9 | 10 |
 
@@ -868,9 +1035,7 @@ newman run postman/HustleHub-Part2-LoginRateLimit.postman_collection.json --inse
 newman run postman/HustleHub-Part2-BookingRateLimit.postman_collection.json --insecure --env-var "seedPassword=<your SEED_PASSWORD>" -r cli,htmlextra --reporter-htmlextra-export newman-reports/booking-ratelimit.html --reporter-htmlextra-skipSensitiveData
 ```
 
-`--insecure` is needed because the local HTTPS certificate is not trusted by Newman. The password is passed on the command line so it is never stored in a collection, and `--reporter-htmlextra-skipSensitiveData` keeps passwords and tokens out of the saved reports. The HTML reports are saved in `newman-reports/`.
-
-> ✏️ **KAITLYN:** once the Newman job runs green in GitHub Actions, change *"run manually with Newman"* above to say the API tests are **automated in the pipeline** against the Docker containers. Also update the two "Not Owner" requests to check the message (*"You can only update your own gigs."* / *"You can only delete your own gigs."*), so the `403` can only come from the ownership check.
+`--insecure` is needed because the local HTTPS certificate is not trusted by Newman. The CORS check uses a `frontendUrl` collection variable (default `http://localhost:5173`). Against the Docker stack, run the main collection with `--env-var "baseUrl=http://localhost:5000" --env-var "frontendUrl=http://localhost:8080"` and without `--insecure`. The password is passed on the command line so it is never stored in a collection, and `--reporter-htmlextra-skipSensitiveData` keeps passwords and tokens out of the saved reports. The HTML reports are saved in `newman-reports/`.
 
 ---
 
@@ -891,9 +1056,10 @@ There are two workflow files in `.github/workflows/`:
 
 | Job | Steps | Fails when |
 |-----|-------|-----------|
-| **Backend tests** | Install with `npm ci` → lint (ESLint and `eslint-plugin-security`) → 127 Jest tests | Any lint error or warning, or any failing test |
-| **Frontend lint, tests and build** | Install with `npm ci` → lint → 29 Vitest tests → production build | Any lint error, failing test or build error |
+| **Backend tests** | Install with `npm ci` → lint (ESLint and `eslint-plugin-security`) → 192 Jest tests | Any lint error or warning, or any failing test |
+| **Frontend lint, tests and build** | Install with `npm ci` → lint → 64 Vitest tests → production build | Any lint error, failing test or build error |
 | **Security scans** | `npm audit` on both apps → Gitleaks on new commits → Gitleaks on the full git history | Any high or critical vulnerability, or any secret found |
+| **Docker stack, API tests and ZAP scan** | Only runs after the backend and frontend jobs pass → `docker compose up --build --wait` (mongo, backend and frontend all healthy) → `docker compose ps -a` → `curl --fail` on the backend health endpoint and the frontend → Newman (main API collection, then the login and booking rate-limit tests) → OWASP ZAP baseline scan of the frontend → container logs on failure → `docker compose down` always | A container is unhealthy, a health check or `curl` fails, any Newman assertion fails, or ZAP finds a medium or high risk alert |
 
 **`codeql.yml`**
 
@@ -901,7 +1067,31 @@ There are two workflow files in `.github/workflows/`:
 |-----|-------------|
 | **CodeQL analysis (JavaScript)** | Static analysis of the backend and frontend JavaScript with the `security-extended` queries. Results appear in the repository's **Security → Code scanning** tab |
 
-> ✏️ **KAITLYN:** add your **Docker** job to this table: it builds and starts the containers with `docker compose up --build --wait`, checks the backend and frontend respond, runs Newman against the running API and OWASP ZAP against the running frontend, prints container logs on failure, and always shuts the stack down. Include the ZAP failure threshold.
+### The Docker job in detail
+ 
+The job in `.github/workflows/ci.yml` has `needs: [backend, frontend]`, so it only runs after the unit tests, lint and builds pass. It does not touch the other jobs.
+ 
+**What it starts.** `docker compose up --build --wait` builds both images and starts the same stack as in [Docker](#docker). `--wait` only returns once `mongo`, the `backend` and the `frontend` are all healthy, and it fails if one is not. `docker compose ps -a` then prints every container so the job log shows they are running.
+ 
+**Settings and secrets.** No `.env` file is committed. The workflow sets `USE_HTTPS=false` and `MONGODB_URI` as job settings, and creates a fresh `JWT_SECRET` and `SEED_PASSWORD` for every run with `openssl rand` (masked in the log), so nothing secret is stored anywhere.
+ 
+**What it checks.**
+ 
+1. `curl --fail` on the backend health endpoint (`http://localhost:5000/health`) must return HTTP 200.
+2. `curl --fail` on the Nginx frontend (`http://localhost:8080`) must succeed.
+3. **Newman** runs the main API collection (79 requests, 114 assertions) against the running API. Any failed assertion fails the job. The login and booking rate-limit collections then run after the API is recreated with the real limits, because they need a fresh in-memory counter. The first run uses raised limits (`AUTH_RATE_LIMIT` and `BOOKING_RATE_LIMIT`) only so the 79 requests are not blocked.
+4. **OWASP ZAP** runs a baseline scan of the running frontend (ZAP, 2026).
+**ZAP failure threshold.** The rules file `.zap/rules.tsv` sets every **medium and high risk** rule to `FAIL`. Low and informational rules keep ZAP's default of `WARN`: they are listed in the report but do not fail the job. The scan runs with `-I`, which only stops *warnings* failing the job, so the step fails if any `FAIL` rule finds something. No step uses `continue-on-error`.
+ 
+**No rule has been downgraded.** If a rule ever has to be moved from `FAIL` to `WARN`, the reason must be written here.
+ 
+**Cleanup and evidence.** A step with `if: failure()` prints `docker compose logs`, so the container logs are in the job log whenever something fails. A step with `if: always()` runs `docker compose down --volumes`, so the stack is shut down even when an earlier step failed. The Newman and ZAP reports are saved as a workflow artifact named `docker-job-reports`.
+ 
+**Results.**
+ 
+- [Docker job passing](screenshots/ci-04-docker-job-green.png)
+- [Newman results in the job log](screenshots/ci-05-newman-results.png)
+- [ZAP baseline report](screenshots/zap-01-report.png)
 
 ### How the pipeline is built
 
@@ -991,9 +1181,10 @@ Vulnerable dependencies and leaked secrets are both software supply chain risks 
 - **Frontend:** `npm audit fix` reported *"up to date"* without applying the fixes, so the safe patch versions were installed directly: `vite` 8.3.2 → 8.3.5, `undici` 7.30.0 → 7.30.1 and `zod` 4.6.5 → 4.6.7. Lint, tests and the build were re-run afterwards. Result: **0 vulnerabilities**.
 
 **Accepted residual risk:** 5 low-severity warnings remain in the backend, all from `deepmerge` inside Jest. The only offered fix is downgrading Jest to version 25, which would break the test suite. These packages are development-only: `npm audit --omit=dev` reports **0 vulnerabilities** for the production dependencies.
-
-> ✏️ **KAITLYN:** once `backend/Dockerfile` uses `npm ci --omit=dev`, add: *"Jest is not installed in the production Docker image."*
-
+ 
+Jest is not installed in the production Docker image, because `backend/Dockerfile` uses `npm ci --omit=dev`.
+ 
+The audit also proved itself later in Part 3: a new high severity advisory was published for `follow-redirects` (used by `axios`) and the pipeline failed on its own. `npm audit fix` updated it from 1.16.1 to 1.16.2 and the job went green again.
 ### Gitleaks
 
 Gitleaks scans for secrets such as passwords, API keys, tokens and private keys. It runs twice in the security job:
@@ -1013,7 +1204,7 @@ This table maps common threats to the protections that address them, and to the 
 | Threat | Protections | Where | Evidence |
 |--------|-------------|-------|----------|
 | **NoSQL injection** | Keys starting with `$` or containing `.` dropped; type checks reject objects where text is expected; URL IDs must be 24 hex characters; category filter only accepts allowed values | `sanitizeMiddleware.js`, `validationMiddleware.js`, `objectIdMiddleware.js`, `gigController.js` | `sanitize.test.js`, `authValidation.test.js`, `gigBookingValidation.test.js`, `objectId.test.js`; Postman injection requests |
-| **Cross-site scripting (XSS)** | `<`, `>` and `$` removed from text; React escapes all displayed text, with no raw HTML rendering; Helmet CSP on API responses | `sanitizeMiddleware.js`, React components, `app.js` | `sanitize.test.js`; Postman XSS requests |
+| **Cross-site scripting (XSS)** | `<`, `>` and `$` removed from text; React escapes all displayed text, with no raw HTML rendering; Helmet CSP on API responses; Nginx Content Security Policy on the frontend, with no third-party scripts, styles or fonts | `sanitizeMiddleware.js`, React components, `app.js`, `frontend/nginx.conf` | `sanitize.test.js`; Postman XSS requests; OWASP ZAP baseline scan (Docker job) |
 | **Prototype pollution** | `__proto__`, `constructor` and `prototype` keys dropped; clean objects built with `Object.fromEntries()` | `sanitizeMiddleware.js` | `sanitize.test.js` (fails on the old code); CodeQL alert closed |
 | **Broken authentication: brute force** | IP rate limit on login and registration; general API limit | `rateLimitMiddleware.js`, `app.js` | `rateLimit.test.js`; Postman login rate-limit collection |
 | **Broken authentication: weak or exposed passwords** | Password strength rules; bcrypt with cost 10 and salting; hash never returned; same message for unknown email and wrong password | `validationMiddleware.js`, `passwordService.js`, `userModel.js`, `authController.js` | `authValidation.test.js`, `passwordService.test.js`, `registerStoresHash.test.js` |
@@ -1024,11 +1215,12 @@ This table maps common threats to the protections that address them, and to the 
 | **Sensitive data exposure** | Generic `500` messages with no stack traces or internal details; password hashes removed from responses; secrets kept in `.env` and checked by Gitleaks | `errorHandler.js`, `userModel.js`, `.gitignore`, `ci.yml` | `errorHandler.test.js`, `registerStoresHash.test.js`; Gitleaks full-history scan |
 | **Denial of service** | General API rate limit; stricter login, registration and booking limits; 10 kB request body limit | `rateLimitMiddleware.js`, `app.js` | `rateLimit.test.js`; CodeQL rate-limit alerts closed |
 | **Vulnerable dependencies** | `npm audit` fails the build on high or critical vulnerabilities | `ci.yml` | Security scans job; audit results above |
-| **Security misconfiguration** | Helmet security headers; CORS limited to `FRONTEND_URL`; least-privilege workflow permissions | `app.js`, `.github/workflows/` | Postman security-header requests |
+| **Security misconfiguration** | Helmet security headers; CORS limited to `FRONTEND_URL`; least-privilege workflow permissions; Nginx security headers on the frontend (CSP, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`); Nginx version hidden | `app.js`, `.github/workflows/`, `frontend/nginx.conf`, `docker-compose.yml` | Postman security-header requests; OWASP ZAP baseline scan that fails on medium and high findings (Docker job) |
+| **Container security** | Backend runs as the non-root `node` user with production dependencies only; `.dockerignore` keeps `.env`, certificates and tests out of both images; secrets are passed in at run time, never baked in; MongoDB is not published to the host; Nginx runs its workers as an unprivileged user | `backend/Dockerfile`, `frontend/Dockerfile`, `.dockerignore` files, `docker-compose.yml` | `docker compose ps` screenshot; Docker job in `ci.yml` |
+| **Invalid financial input** | Business expenses must be a plain number from 0 to R100 000 000, checked in the browser and again in the backend before any database work; income is only ever the logged-in freelancer's | `taxService.js`, `incomeController.js`, `expenses.js` | `taxService.test.js`, `incomeController.test.js`, `IncomeTaxTab.test.jsx`; Postman income requests |
 | **Insecure code patterns** | CodeQL and `eslint-plugin-security` on every push | `codeql.yml`, `ci.yml`, `eslint.config.js` | [Static code analysis](#static-code-analysis) |
 
-> ✏️ **KAITLYN:** add the frontend Nginx security headers to the XSS and security misconfiguration rows, OWASP ZAP to the evidence column, and the non-root Docker containers.
->
+
 > ✏️ **NIKKITA:** add rows or protections for account lockout (brute force against one account from many IPs), admin unlock, the security audit log, JWT revocation on logout (stolen token reused after logout) and cloud logging (detecting attacks). Check the scan results again with all features in, and update them here.
 
 ---
@@ -1045,9 +1237,9 @@ Part 3 evidence screenshots are linked from the sections they support:
 | [CodeQL first scan, part 1](screenshots/codeql-01a-before-41-alerts.png) | [Static code analysis](#static-code-analysis) |
 | [CodeQL first scan, part 2](screenshots/codeql-01b-before-41-alerts.png) | [Static code analysis](#static-code-analysis) |
 | [CodeQL test-file alert dismissed](screenshots/codeql-05-alert-25-dismissed.png) | [Static code analysis](#static-code-analysis) |
-
-> ✏️ **KAITLYN:** add your tax dashboard, Docker and ZAP screenshots.
->
+| [Income & Tax tab](screenshots/tax-01-income-tax-tab.png), [charts](screenshots/tax-02-charts.png), [expenses entered](screenshots/tax-03-expenses-entered.png) and [How we estimate your tax](screenshots/tax-04-how-we-estimate.png) | [Tax calculation](#tax-calculation) |
+| [`docker compose ps`](screenshots/docker-01-compose-ps.png) and [the app running in Docker](screenshots/docker-02-app-running.png) | [Docker](#docker) |
+| [Docker job passing](screenshots/ci-04-docker-job-green.png), [Newman results](screenshots/ci-05-newman-results.png) and [ZAP baseline report](screenshots/zap-01-report.png) | [CI/CD pipeline](#cicd-pipeline) |
 > ✏️ **NIKKITA:** add your logging and security feature screenshots.
 
 ### 🖥️ The application (Part 2)
@@ -1086,7 +1278,7 @@ These screenshots from Part 2 still show the current application, apart from the
 | Member | Student number | Part 3 responsibilities |
 |--------|:--------------:|-------------------------|
 | **Viandra Kistasamy** | ST10445089 | Edit gig feature (Part 2 feedback), backend Jest tests, CI/CD pipeline, dependency audit fixes, Gitleaks secret scanning, CodeQL and ESLint static analysis and fixes, security review, README structure |
-| **Kaitlyn Pillay** | ST10437630 | ✏️ **KAITLYN:** add your responsibilities |
+| **Kaitlyn Pillay** | ST10437630 | ✏️ **KAITLYN:** SARS 2026/27 tax calculation and its unit tests, business expenses input with validation on the frontend and backend, income per month and per gig, Income & Tax dashboard with charts, Dockerfiles and Docker Compose with health checks and start order, MongoDB connection retry, optional HTTPS, Nginx security headers, the Docker job in the pipeline (Newman and OWASP ZAP), and the README sections for these |
 | **Nikkita Ramsumair** | ST10445383 | ✏️ **NIKKITA:** add your responsibilities |
 
 ---
@@ -1094,18 +1286,23 @@ These screenshots from Part 2 still show the current application, apart from the
 <a id="references"></a>
 ## 📚 References
 
+Docker, Inc., 2026. *Control startup and shutdown order in Compose*. [Online] Available at: https://docs.docker.com/compose/how-tos/startup-order/ [Accessed 3 November 2026].
+ 
 GitHub, 2026. *Concepts for CodeQL*. [Online] Available at: https://docs.github.com/en/code-security/concepts/code-scanning/codeql [Accessed 28 October 2026].
-
+ 
 Microsoft, 2026a. *What is DevSecOps?* [Online] Available at: https://www.microsoft.com/en-us/security/business/security-101/what-is-devsecops [Accessed 28 October 2026].
-
+ 
 Microsoft, 2026b. *Rate Limiting pattern*. [Online] Available at: https://learn.microsoft.com/en-us/azure/architecture/patterns/rate-limiting-pattern [Accessed 29 October 2026].
-
+ 
 OpenAI, 2026. *ChatGPT*. OpenAI. [Online] Available at: https://chatgpt.com/share/6ae259e2-e664-83e9-b664-0961b7d8dfae [Accessed 28 October 2026].
-
+ 
 OWASP Foundation, 2021. *A03:2021 – Injection*. [Online] Available at: https://owasp.org/Top10/2021/A03_2021-Injection/ [Accessed 29 October 2026].
-
+ 
 OWASP Foundation, 2025. *A03:2025 – Software Supply Chain Failures*. [Online] Available at: https://owasp.org/Top10/2025/A03_2025-Software_Supply_Chain_Failures/ [Accessed 29 October 2026].
+ 
+South African Revenue Service (SARS), 2026. *Rates of tax for individuals*. [Online] Available at: https://www.sars.gov.za/tax-rates/income-tax/rates-of-tax-for-individuals/ [Accessed 4 November 2026].
+ 
+ZAP, 2026. *ZAP - Baseline Scan*. [Online] Available at: https://www.zaproxy.org/docs/docker/baseline-scan/ [Accessed 4 November 2026].
 
-> ✏️ **KAITLYN** and ✏️ **NIKKITA:** add your references here in the same format, in alphabetical order.
->
+
 > ✏️ **NIKKITA (final step):** before submission, search the README for `✏️` and make sure every placeholder has been filled in and removed. Check the figures (test counts, alert counts) still match the merged code.
