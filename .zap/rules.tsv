@@ -9,7 +9,7 @@
 10020	FAIL	Missing Anti-clickjacking Header (Medium)
 10038	FAIL	Content Security Policy (CSP) Header Not Set (Medium)
 10055	FAIL	CSP: wildcard, unsafe-inline or other weak directive (Medium)
-90003   IGNORE  Sub Resource Integrity Attribute Missing - same-origin Vite assets, SRI not applicable
+90003	IGNORE	Sub Resource Integrity Attribute Missing - same-origin Vite assets, SRI not applicable
 10098	FAIL	Cross-Domain Misconfiguration (Medium)
 10003	FAIL	Vulnerable JS Library (Medium or High)
 10040	FAIL	Secure Pages Include Mixed Content (Medium)
