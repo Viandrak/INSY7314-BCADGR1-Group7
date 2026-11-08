@@ -26,6 +26,14 @@ describe('JWT service', () => {
     expect(decoded.aud).toBe('hustlehub-client');
     expect(decoded.exp).toBeGreaterThan(decoded.iat);
   });
+  
+  test('gives every token a unique ID (jti), even for the same user', () => {
+    const first = verifyToken(generateToken(USER));
+    const second = verifyToken(generateToken(USER));
+    expect(first.jti).toEqual(expect.any(String));
+    expect(second.jti).toEqual(expect.any(String));
+    expect(first.jti).not.toBe(second.jti);
+  });
 
   test('signs tokens with HS256', () => {
     const { header } = jwt.decode(generateToken(USER), { complete: true });
