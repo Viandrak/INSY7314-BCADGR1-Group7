@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Transaction = require('../models/transactionModel');
 const Booking = require('../models/bookingModel');
 const { calculateTax, parseExpenses } = require('../services/taxService');
+const { logServerError } = require('../utils/logger');
 const { sendSuccess, sendError } = require('../utils/responseHandler');
 
 
@@ -125,6 +126,7 @@ async function getIncomeSummary(req, res) {
       },
     });
   } catch (err) {
+    logServerError('income.getIncomeSummary', err);
     return sendError(res, 500, 'An unexpected error occurred while calculating income.');
   }
 }
