@@ -1,4 +1,4 @@
-const { body, validationResult } = require('express-validator');
+const { body, query, validationResult } = require('express-validator');
 const { sendError } = require('../utils/responseHandler');
 
 const GIG_CATEGORIES = ['Design', 'Development', 'Writing', 'Marketing', 'Tutoring', 'Other'];
@@ -93,6 +93,12 @@ const createBookingValidationRules = [
     .isLength({ min: 24, max: 24 }).withMessage('Gig ID must be a valid ID.'),
 ];
 
+const auditLogQueryValidationRules = [
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 200 }).withMessage('Limit must be a whole number between 1 and 200.'),
+];
+
 function handleValidationErrors(req, res, next) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -108,5 +114,6 @@ module.exports = {
   createGigValidationRules,
   updateGigValidationRules,
   createBookingValidationRules,
+  auditLogQueryValidationRules,
   handleValidationErrors,
 };
