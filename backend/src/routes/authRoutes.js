@@ -1,5 +1,6 @@
 const express = require('express');
-const { register, login } = require('../controllers/authController');
+const { register, login, logout } = require('../controllers/authController');
+const { authenticate } = require('../middleware/authMiddleware');
 const {
   registerValidationRules,
   loginValidationRules,
@@ -26,5 +27,9 @@ router.post(
   handleValidationErrors,
   login
 );
+
+// Logout needs a valid token, because it is that token that gets revoked.
+// It takes no body, so the allowlist rejects any extra field.
+router.post('/logout', authenticate, allowFields([]), logout);
 
 module.exports = router;
