@@ -78,8 +78,11 @@ Because the platform processes sensitive information — user credentials, trans
 | **Income & Tax dashboard** | One income summary | A tab with summary cards, a monthly income chart, an income vs tax chart, an expenses input and a "How we estimate your tax" panel |
 | **Docker** | Run locally only | The whole stack (MongoDB, backend, frontend) runs with `docker compose up --build`, with health checks, a start order and a non-root backend. See [Docker](#docker) |
 | **Frontend fonts** | Loaded from Google Fonts | Served from the app itself, so the page loads nothing from third parties and its Content Security Policy can stay strict |
+| **Logging** | Errors printed to the console | Structured JSON logs written with Winston and sent to Better Stack: logins, registrations, gigs, bookings, transactions, `403` responses, rate-limit hits, lockouts and errors. See [Logging and monitoring](#logging-and-monitoring) |
+| **Failed logins** | Only the per-IP rate limit | Account lockout: 5 failed logins lock that account for 15 minutes, and an admin can unlock it early. See [Account lockout](#account-lockout) |
+| **Security events** | Not recorded | A security audit log stored in MongoDB and shown to admins. See [Security audit log](#security-audit-log) |
+| **Logout** | Only cleared the token in the browser | Revokes the token on the server, so a copied token stops working. See [JWT revocation on logout](#jwt-revocation-on-logout) |
 
-> ✏️ **NIKKITA:** add rows for logging, account lockout, the security audit log and JWT revocation.
 
 > [!NOTE]
 > **Part 2 feedback addressed**
@@ -101,8 +104,10 @@ Because the platform processes sensitive information — user credentials, trans
 - Income summary for freelancers with an illustrative tax estimate based on the SARS 2026/27 tax brackets, the business expenses the freelancer enters, and income per month and per gig
 - Rate limiting on every API route, with stricter limits on authentication and booking
 - Seed script that creates demo accounts, gigs, bookings and transactions
-
-> ✏️ **NIKKITA:** add bullets for logging, account lockout, the audit log and logout with token revocation.
+- Structured logging to the console and to Better Stack, covering login attempts, registrations, gig changes, bookings, transactions, access denied responses, rate-limit hits, account lockouts and errors, with passwords and tokens never logged
+- Account lockout after 5 failed logins, with an admin unlock
+- Security audit log of logins, lockouts, unlocks, logouts and access denied responses, for admins
+- Logout that revokes the token on the server
 
 ### Frontend
 
@@ -177,9 +182,12 @@ All security-relevant logic sits inside the backend's **trust boundary**, before
 | Backend container runs as a non-root user with production dependencies only, and no secrets are baked into any image | Part 3 |
 | Security headers on the frontend Nginx server (Content Security Policy, clickjacking and MIME-sniffing protection) | Part 3 |
 | OWASP ZAP baseline scan of the running frontend that fails the pipeline on medium and high risk findings | Part 3 |
-
-
-> ✏️ **NIKKITA:** add rows for account lockout, admin unlock, the security audit log, JWT revocation on logout and cloud logging.
+| Account lockout: 5 failed logins lock one account for 15 minutes, counted in the database across all IP addresses | Part 3 |
+| Admin unlock of a locked account, recorded in the audit log | Part 3 |
+| Identical response for a wrong password, an unknown email and a locked account, including the response time | Part 3 |
+| Security audit log of logins, lockouts, unlocks, logouts and `403` responses, visible to admins only | Part 3 |
+| JWT revocation on logout (a unique `jti` on every token and a blacklist) | Part 3 |
+| Structured logging to a cloud platform (Better Stack), with passwords and tokens never logged | Part 3 |
 
 ---
 
@@ -193,7 +201,7 @@ All security-relevant logic sits inside the backend's **trust boundary**, before
 | `src/config` | Database connection setup |
 | `src/routes` | Defines API endpoints and maps them to controllers and middleware |
 | `src/controllers` | Handles request and response logic, including ownership checks |
-| `src/models` | Mongoose schemas for users, gigs, bookings and transactions |
+| `src/models` | Mongoose schemas for users, gigs, bookings, transactions, the audit log and revoked tokens |
 | `src/services` | Reusable logic such as password hashing and JWT handling |
 | `src/middleware` | Authentication, authorisation, allowlist, sanitisation, validation, ID format checks, rate limiting and error handling |
 | `src/utils` | Shared helpers, including the consistent `{ success, message }` response format |
@@ -237,7 +245,7 @@ flowchart LR
 <a id="database-and-data-models"></a>
 ## 🗄️ Database and data models
 
-HustleHub+ uses **MongoDB Atlas** with four collections, defined as Mongoose schemas in `src/models`.
+  HustleHub+ uses **MongoDB Atlas** with six collections, defined as Mongoose schemas in `src/models`. The diagram shows the four main ones, and the two added in Part 3 are described under **Part 3 additions** below.
 
 ```mermaid
 erDiagram
@@ -282,7 +290,13 @@ erDiagram
 
 All models use automatic `createdAt` and `updatedAt` timestamps.
 
-> ✏️ **NIKKITA:** add the new fields and collections (for example `failedLoginAttempts` and `lockUntil` on User, the audit log and the token blacklist).
+  **Part 3 additions**
+
+  | Where | What was added | Why |
+  |-------|----------------|-----|
+  | `User` | `failedLoginAttempts` (number) and `lockUntil` (date) | Account lockout is stored in the database, so it survives a server restart and counts attempts from every IP address together |
+  | `AuditLog` (new collection) | `event`, `user`, `email`, `actor`, `ip`, `method`, `path`, `details` and `createdAt` | One document per security event, shown to admins on the Admin page |
+  | `RevokedToken` (new collection) | `jti` (unique) and `expiresAt` | The blacklist of tokens that were logged out. A TTL index on `expiresAt` deletes each entry automatically when the token would have expired anyway (MongoDB, Inc., 2026) |
 
 **💡 Design decisions**
 
@@ -315,7 +329,7 @@ The token is signed and verified with three explicit settings rather than relyin
 
 `jwt.verify()` is called with all three constraints, so a token that is correctly signed but has the wrong algorithm, issuer or audience is rejected before its payload is ever trusted — not just a malformed or expired token.
 
-> ✏️ **NIKKITA:** add account lockout and JWT revocation on logout here, or link to [Own security features](#own-security-features).
+Two Part 3 changes build on this. Every token now carries a unique `jti`, so it can be revoked at logout (see [JWT revocation on logout](#jwt-revocation-on-logout)), and repeated failed logins lock the account (see [Account lockout](#account-lockout)).
 
 ### Role-based access control
 
@@ -336,6 +350,9 @@ An `authorize(...allowedRoles)` middleware runs after `authenticate` on every pr
 | `GET /api/admin/users` | ❌ | ❌ | ✅ |
 | `GET /api/admin/gigs` | ❌ | ❌ | ✅ |
 | `GET /api/admin/bookings` | ❌ | ❌ | ✅ |
+| `POST /api/admin/users/:id/unlock` | ❌ | ❌ | ✅ |
+| `GET /api/admin/audit-logs` | ❌ | ❌ | ✅ |
+| `POST /api/auth/logout` | ✅ | ✅ | ✅ |
 
 RBAC controls which *role* can call an endpoint at all; the ownership checks described below separately control which *specific records* a freelancer can modify once they're past the role check.
 
@@ -572,25 +589,129 @@ The calculation has 34 unit tests (`backend/tests/taxService.test.js`): zero inc
 
 <a id="own-security-features"></a>
 ## 🔒 Own security features
+Part 3 adds three security features beyond the minimum requirements. All three are working in the application, are covered by automated tests, and are shown in the demonstration video.
 
-> ✏️ **NIKKITA:** fill in this section with your three features:
-> - **Account lockout:** how it works, how it differs from the existing per-IP rate limit, the safeguards against account enumeration and denial of service, and admin unlock
-> - **Security audit log:** what is recorded and how admins view it
-> - **JWT revocation on logout:** why each token now has a unique `jti`, the blacklist with its TTL index, and how revoked tokens are rejected
->
-> For each one, say how it was tested.
+### Account lockout
+
+**How it works.** After 5 failed logins the account is locked for 15 minutes (OWASP Foundation, 2026a). The failed count (`failedLoginAttempts`) and the lock time (`lockUntil`) are stored on the user in MongoDB. A correct password resets the count to 0, and the lock ends by itself after 15 minutes. While an account is locked, even the correct password is refused, and further attempts do not extend the lock.
+
+**How it differs from the rate limit.** Both controls work together, and they protect against different things:
+
+| | Rate limit (Part 2) | Account lockout (Part 3) |
+|---|---|---|
+| Counted per | IP address | Account |
+| Stored in | Server memory | The database |
+| After a server restart | Resets | Keeps counting |
+| Attacker changes IP address | Gets a fresh allowance | Still locked, because the count follows the account |
+| Protects against | One source sending too many requests | Password guessing against one account from many IP addresses |
+
+**Safeguard against account enumeration.** A wrong password, an email that does not exist and a locked account all return the same status (`401`) and the same message ("Invalid email or password."). For an email that does not exist, the server still runs a full bcrypt comparison against a throwaway hash, and for a locked account it still compares the password and ignores the result. Every case therefore takes about the same time, so neither the message nor the response time shows which emails are registered or which accounts are locked. The failed count is also not increased while an account is locked.
+
+**Safeguard against denial of service.** An attacker could try to lock a victim out on purpose. This is limited by:
+
+- keeping the lock temporary (15 minutes) instead of permanent
+- keeping the per-IP rate limit in front, so one source cannot lock many accounts quickly
+- logging every failed login and lockout to Better Stack and the audit log, so repeated locks on one account are easy to spot
+- letting an admin unlock the account early
+
+**Admin unlock.** An admin can unlock an account with `POST /api/admin/users/:id/unlock` or with the **Unlock** button next to a locked user on the Admin page. It resets `failedLoginAttempts` and `lockUntil`, and the unlock is logged and recorded in the audit log together with the admin's ID.
+
+**How it was tested.** `accountLockout.test.js` checks that:
+
+- the account locks after 5 failures and not after 4
+- the response is identical for a wrong password, an unknown email and a locked account
+- the correct password is still rejected during the lock, and attempts during the lock do not extend it
+- the lock lifts after it expires, and counting then starts again from zero
+- a successful login resets the count
+- the audit log records every failure and the lockout, and never contains the password or hash
+
+`adminSecurity.test.js` checks that an admin can unlock an account and that a client gets `403`. `AdminPage.test.jsx` checks that only locked accounts show an Unlock button and that clicking it calls the API.
+
+Evidence: [a locked account with its Unlock button on the Admin page](screenshots/lockout-01-admin-locked-account.jpeg).
+
+### Security audit log
+
+**What is recorded.** Security events are stored in the `AuditLog` collection in MongoDB:
+
+| Event | When |
+|-------|------|
+| `login_success` | A user logs in |
+| `login_failure` | A login fails: wrong password, unknown email, or a locked account |
+| `account_locked` | An account is locked after 5 failed logins |
+| `account_unlocked` | An admin unlocks an account (the admin is stored as the actor) |
+| `logout` | A user logs out |
+| `access_denied` | A request is refused with `403`: the wrong role, or another user's gig or booking |
+
+Each entry has the time, the account and email involved, the IP address, the route and a short description. Passwords and tokens are never stored. The audit log is separate from the cloud logs: it is queryable data inside the application, so an admin can review it without leaving the app.
+
+**How admins view it.** On the Admin page, the **Audit log** tab shows the newest events first. It is loaded from `GET /api/admin/audit-logs` (optional `?limit=`, 1 to 200), which only admins can call. A write to the audit log never blocks the request that caused it: if the write fails, the problem is logged and the login or logout still completes.
+
+**How it was tested.** `auditService.test.js` checks that events are saved, that nothing is written while the database is not connected, that a failed write never throws, and that over-long values are cut to the size the schema allows. `adminSecurity.test.js` checks that admins can read the log, that clients, freelancers and requests without a token get `403` or `401`, and that the `limit` value is validated.
+
+Evidence: [the Audit log tab on the Admin page](screenshots/audit-01-admin-audit-log.jpeg).
+
+### JWT revocation on logout
+
+**The problem.** A JWT stays valid until it expires. Clearing the token in the browser does not stop a copied or stolen token from working until then.
+
+**Why every token has a `jti`.** The blacklist has to identify exactly one token. Every token is now signed with a unique ID (`jti`), created with `crypto.randomUUID()`, so two logins by the same user produce two different IDs and logging out of one device does not log out the others.
+
+**How it works.**
+
+1. `POST /api/auth/logout` stores the token's `jti` and its expiry time in the `RevokedToken` collection. The token itself is never stored (OWASP Foundation, 2026c).
+2. A TTL index on `expiresAt` makes MongoDB delete each entry automatically once the token would have expired anyway, so the blacklist never grows without limit.
+3. The `authenticate` middleware checks the blacklist after it verifies the signature, issuer, audience and algorithm. A revoked token is refused with `401`. A token with no `jti` is also refused with `401`. If the blacklist cannot be checked, the request is refused instead of allowed.
+4. The frontend logout calls this endpoint first, and then clears the saved session even if the request fails.
+
+Because tokens now need a `jti`, tokens issued before this change stop working and those users have to log in again.
+
+**How it was tested.** `jwtRevocation.test.js` checks that every new token has a unique `jti`, that a token works before logout, that the same token is rejected after logout, that a different token for the same user still works, that logging out twice does not crash, that only the `jti` and expiry are stored, and that a token without a `jti` is rejected. `jwtService.test.js` also checks the unique ID, and `Navbar.test.jsx` checks that the frontend calls the logout endpoint and still logs out if the request fails.
+
+Evidence: [the logout request succeeding](screenshots/revocation-02-logout-200.png), then [the same token rejected with 401](screenshots/revocation-01-old-token-rejected.png).
 
 ---
 
 <a id="logging-and-monitoring"></a>
 ## 📈 Logging and monitoring
 
-> ✏️ **NIKKITA:** fill in this section:
-> - the logging library and the cloud logging platform
-> - what is logged: login attempts, registration, bookings, transactions, `403` access denied, rate-limit hits, account lockouts and errors
-> - what is never logged (passwords, tokens)
-> - why these logs matter for monitoring and security
-> - a screenshot link to the logs on the cloud platform
+**What is used.** The API writes structured JSON logs with **Winston** (winston contributors, 2026). Every log line goes to the console, which is what `docker compose logs` shows, and is also sent to **Better Stack** (Better Stack, 2026), a cloud logging platform, where the logs can be searched and watched live. Each line has a timestamp, the service name, an event name such as `auth.login.failed`, and the details of the event.
+
+Cloud logging is switched on by two settings, `BETTER_STACK_SOURCE_TOKEN` and `BETTER_STACK_INGESTING_HOST`. They live in `.env` locally and in GitHub Secrets for the pipeline, and are never committed. If they are missing, the API still works and logs to the console only. When the server stops, any logs still waiting in memory are sent before it exits.
+
+**What is logged.**
+
+| Event | Level | Details recorded |
+|-------|:-----:|------------------|
+| `auth.login.success` | info | User ID, role, IP address |
+| `auth.login.failed` | warn | Reason (wrong password or unknown email), email, attempt count, IP address |
+| `auth.login.blocked` | warn | A login attempt on a locked account |
+| `auth.account.locked` | warn | User ID, email, when the lock ends |
+| `admin.account.unlocked` | info | The admin's ID and the account unlocked |
+| `auth.register.success` / `auth.register.duplicate` | info / warn | User ID and role, or a duplicate email attempt |
+| `auth.logout` | info | User ID and role |
+| `auth.token.rejected` / `auth.token.revoked_reuse` | warn | A missing, invalid or logged-out token being used |
+| `gig.created` / `gig.updated` / `gig.deleted` | info | Gig ID and the owner's ID |
+| `booking.created` | info | Booking ID, reference, client, freelancer and amount |
+| `transaction.created` | info | Transaction ID, booking ID, freelancer and amount |
+| `access.denied` | warn | User ID, role, method and route of a `403` response |
+| `ratelimit.hit` | warn | Which limiter, IP address, user and route |
+| `request.error` and other `*.error` events | error | The error message and stack trace, kept in the logs only and never sent to the client |
+| `server.started` / `server.stopping` | info | Port and protocol |
+
+**What is never logged.** Passwords, password hashes, tokens and authorization headers. A redaction step runs on every log line and replaces any field whose name contains `password`, `hash`, `token`, `secret`, `authorization`, `cookie`, `jwt` or `jti` with `[REDACTED]`, so a secret cannot be logged even by mistake. `logger.test.js` checks this. Stack traces are logged on the server and never returned in a response.
+
+**Why these logs matter.**
+
+- **Detecting attacks.** Many `auth.login.failed` events for one email, or from one IP address, show password guessing. `auth.account.locked` shows it succeeded in triggering the lock, and `ratelimit.hit` shows a source being throttled.
+- **Spotting stolen tokens.** `auth.token.revoked_reuse` means a logged-out token is being used again, which is a sign it was copied.
+- **Spotting access control probing.** Repeated `access.denied` events from one user show someone trying routes or records that are not theirs.
+- **Financial integrity.** `booking.created` and `transaction.created` give a trail for every booking and payment record, which helps when investigating a dispute or a suspicious income figure.
+- **Finding faults.** `request.error` events with stack traces let the team fix problems that users only see as a generic message (OWASP Foundation, 2026b).
+- **Evidence after an incident.** Logs kept on a separate platform survive even if the server or its database is damaged, and an attacker who gets into the server cannot quietly erase them.
+
+**How to view the logs.** Open the source in Better Stack and use **Live tail**, or search the events. Locally, run the backend and read the console, or run `docker compose logs backend` when using Docker.
+
+Evidence: [Better Stack Live tail showing login, booking and transaction events](screenshots/logging-01-better-stack-live-tail.png), [failed logins and a lockout in Better Stack](screenshots/logging-02-better-stack-lockout-events.png) and [a logged-out token being reused](screenshots/logging-03-better-stack-revoked-token.png).
 
 ---
 
@@ -606,8 +727,7 @@ All endpoints are served from `https://localhost:5000`. Protected endpoints requ
 | ![POST](https://img.shields.io/badge/POST-F59E0B?style=flat-square) | `/api/auth/register` | Public · rate limited | Register as a client or freelancer |
 | ![POST](https://img.shields.io/badge/POST-F59E0B?style=flat-square) | `/api/auth/login` | Public · rate limited | Log in and receive a JWT |
 | ![GET](https://img.shields.io/badge/GET-22C55E?style=flat-square) | `/api/protected/test` | JWT | Returns the token's user ID and role |
-
-> ✏️ **NIKKITA:** add the logout endpoint.
+| ![POST](https://img.shields.io/badge/POST-F59E0B?style=flat-square) | `/api/auth/logout` | JWT | Revokes the token used for this request |
 
 ### 🧑‍💻 Gigs
 
@@ -669,8 +789,8 @@ All endpoints are served from `https://localhost:5000`. Protected endpoints requ
 | ![GET](https://img.shields.io/badge/GET-22C55E?style=flat-square) | `/api/admin/users` | JWT · admin only | View all registered users |
 | ![GET](https://img.shields.io/badge/GET-22C55E?style=flat-square) | `/api/admin/gigs` | JWT · admin only | View all gigs on the platform |
 | ![GET](https://img.shields.io/badge/GET-22C55E?style=flat-square) | `/api/admin/bookings` | JWT · admin only | View all bookings on the platform |
-
-> ✏️ **NIKKITA:** add the admin audit log and unlock endpoints.
+| ![POST](https://img.shields.io/badge/POST-F59E0B?style=flat-square) | `/api/admin/users/:id/unlock` | JWT · admin only | Unlock a locked account before the 15 minutes end |
+| ![GET](https://img.shields.io/badge/GET-22C55E?style=flat-square) | `/api/admin/audit-logs` | JWT · admin only | The newest security events (optional `?limit=`, 1 to 200, default 100) |
 
 <details>
 <summary><b>📦 Example request bodies</b></summary>
@@ -756,9 +876,10 @@ npm install
 | `SEED_PASSWORD` | A password of your choice for the demo accounts (8+ characters, uppercase, lowercase and a number) |
 | `FRONTEND_URL` | The frontend's address, allowed by CORS (default `http://localhost:5173`) |
 | `API_RATE_LIMIT` | *Optional.* General requests allowed per IP every 15 minutes (default `300`) |
+| `BETTER_STACK_SOURCE_TOKEN` | *Optional.* The source token from Better Stack. Together with the setting below it sends the logs to the cloud. Never commit the real value |
+| `BETTER_STACK_INGESTING_HOST` | *Optional.* The ingesting host of the Better Stack source, without `https://` (for example `s123456.eu-nbg-2.betterstackdata.com`) |
 
 The Part 2 `ESTIMATED_TAX_RATE` setting has been removed from `.env.example`: the tax now comes from the SARS brackets in `taxService.js`, so there is no rate to configure.
-> ✏️ **NIKKITA:** add the logging platform's token variable (never commit the real value).
 
 > [!CAUTION]
 > The real `.env` file is excluded from Git and must never be committed. Gitleaks checks every commit for secrets (see [Dependency and secret scanning](#dependency-and-secret-scanning)).
@@ -895,6 +1016,8 @@ Open `.env` and fill in the two values (use `cp` instead of `copy` on macOS or L
 |----------|---------|
 | `JWT_SECRET` | A long random value, for example `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` |
 | `SEED_PASSWORD` | The password for the demo accounts (8+ characters, uppercase, lowercase and a number) |
+| `BETTER_STACK_SOURCE_TOKEN` | *Optional.* Sends the backend's logs to Better Stack. Leave empty to log to the console only |
+| `BETTER_STACK_INGESTING_HOST` | *Optional.* The host that goes with the token |
  
 Then start the stack:
  
@@ -947,7 +1070,7 @@ The backend has **192 Jest tests in 17 files**, in `backend/tests/`. Each test b
 | `objectId.test.js` | 10 | ID format checks, including operators in the URL |
 | `passwordService.test.js` | 8 | bcrypt hashing, salting, cost factor 10 and password matching |
 | `registerStoresHash.test.js` | 2 | Registration saves only the hash, and the response contains neither the password nor the hash |
-| `jwtService.test.js` | 9 | Token contents, issuer, audience, expiry, tampering, forged secrets and the `none` algorithm |
+| `jwtService.test.js` | 10 | Token contents, issuer, audience, expiry, tampering, forged secrets and the `none` algorithm |
 | `authMiddleware.test.js` | 8 | Missing, malformed, expired and forged tokens rejected with `401` |
 | `rbacMiddleware.test.js` | 8 | Allowed and blocked roles, missing users and made-up roles |
 | `errorHandler.test.js` | 6 | `404`, malformed JSON, and no leaking of internal error details |
@@ -957,6 +1080,11 @@ The backend has **192 Jest tests in 17 files**, in `backend/tests/`. Each test b
 | `health.test.js` | 3 | `/health` returns `200` when the database is connected and `503` when it is not, and is not blocked by the rate limiter |
 | `database.test.js` | 5 | `connectDB()` retries with exponential backoff, throws when the retries run out, and fails fast without a connection string |
 | `createServer.test.js` | 9 | `USE_HTTPS=false` gives a plain HTTP server with no certificates, and HTTPS mode loads the certificates |
+| `logger.test.js` | 4 | The JSON log format, and that passwords, hashes and tokens are redacted |
+| `jwtRevocation.test.js` | 8 | A unique `jti` per token, a token working before logout and rejected after it, other tokens unaffected, logging out twice, only the `jti` and expiry stored, tokens without a `jti` rejected, and a refusal if the blacklist cannot be checked |
+| `accountLockout.test.js` | 10 | Locking after 5 failures, identical responses, the correct password refused during the lock, the lock lifting, counts resetting, and the audit log |
+| `adminSecurity.test.js` | 12 | Admin unlock (`200`, audited with the admin as actor, `403` for a client, `401`, `404`, `400`) and the audit log endpoint (admin only, validated `limit`) |
+| `auditService.test.js` | 5 | Events saved, nothing written without a database, a failed write never throws, long values cut, and refused requests recorded |
 
 </details>
 
@@ -988,9 +1116,10 @@ There are **64 tests in 9 files**:
 | `AppRoutes.test.jsx` | 4 | Logged-out visitors sent to the login page (with a message) for Browse Gigs and gig pages, without calling the API |
 | `LoginPage.test.jsx` | 4 | The login form, typing, invalid credentials and the API call |
 | `RegisterPage.test.jsx` | 3 | The role selector, duplicate email and successful registration |
-| `Navbar.test.jsx` | 3 | Links shown when logged out, and for a freelancer and an admin |
+| `Navbar.test.jsx` | 5 | Links shown when logged out, and for a freelancer and an admin |
 | `IncomeTaxTab.test.jsx` | 14 | The six summary cards, both charts (12 months), income per gig, the "How we estimate your tax" panel, the empty state, and the expenses input: recalculating, rejecting text, negative and too-large values without calling the API, and API errors |
 | `utils.test.js` | 20 | The expenses validation rules and the rand and percentage formatting |
+| `AdminPage.test.jsx` | 6 | Locked and active accounts shown, the Unlock button only on locked accounts, unlocking, error messages, and the audit log tab |
 
 </details>
 
@@ -1219,9 +1348,14 @@ This table maps common threats to the protections that address them, and to the 
 | **Container security** | Backend runs as the non-root `node` user with production dependencies only; `.dockerignore` keeps `.env`, certificates and tests out of both images; secrets are passed in at run time, never baked in; MongoDB is not published to the host; Nginx runs its workers as an unprivileged user | `backend/Dockerfile`, `frontend/Dockerfile`, `.dockerignore` files, `docker-compose.yml` | `docker compose ps` screenshot; Docker job in `ci.yml` |
 | **Invalid financial input** | Business expenses must be a plain number from 0 to R100 000 000, checked in the browser and again in the backend before any database work; income is only ever the logged-in freelancer's | `taxService.js`, `incomeController.js`, `expenses.js` | `taxService.test.js`, `incomeController.test.js`, `IncomeTaxTab.test.jsx`; Postman income requests |
 | **Insecure code patterns** | CodeQL and `eslint-plugin-security` on every push | `codeql.yml`, `ci.yml`, `eslint.config.js` | [Static code analysis](#static-code-analysis) |
-
-
-> ✏️ **NIKKITA:** add rows or protections for account lockout (brute force against one account from many IPs), admin unlock, the security audit log, JWT revocation on logout (stolen token reused after logout) and cloud logging (detecting attacks). Check the scan results again with all features in, and update them here.
+| **Brute force against one account from many IPs** | The account locks for 15 minutes after 5 failed logins. The count is stored in the database, so it follows the account whichever IP address the guesses come from, and the per-IP rate limit stays in front | `lockoutService.js`, `authController.js`, `userModel.js` | `accountLockout.test.js` |
+| **Account enumeration** | A wrong password, an unknown email and a locked account return the same status and message, and take about the same time because a bcrypt comparison always runs | `authController.js`, `lockoutService.js` | `accountLockout.test.js` |
+| **Denial of service by locking someone else's account** | The lock is temporary, the rate limit slows one source down, every lock is logged and audited, and an admin can unlock early | `authController.js`, `adminController.js`, `authRoutes.js` | `accountLockout.test.js`, `adminSecurity.test.js`, `AdminPage.test.jsx` |
+| **Abuse of the admin unlock** | Only admins can unlock (`403` for everyone else), the ID is format-checked, no request body is accepted, and every unlock is logged with the admin's ID | `adminRoutes.js`, `adminController.js` | `adminSecurity.test.js` |
+| **Stolen or copied token used after logout** | Every token has a unique `jti`. Logout puts it on a blacklist, and the middleware rejects blacklisted tokens and tokens without a `jti` | `jwtService.js`, `authMiddleware.js`, `revokedTokenModel.js` | `jwtRevocation.test.js`, `jwtService.test.js` |
+| **Attacks that go unnoticed** | Logins, lockouts, `403` responses, rate-limit hits, bookings, transactions and errors are logged to Better Stack, and security events are stored in the audit log for admins | `logger.js`, `auditService.js` | `logger.test.js`, `auditService.test.js` |
+| **Sensitive data in logs** | Fields named like a password, hash, token or secret are replaced with `[REDACTED]` before any log line is written, and stack traces stay in the logs only | `logger.js`, `errorHandler.js` | `logger.test.js`, `errorHandler.test.js` |
+| **Tampering with or reading the audit log** | The audit log can only be read through an admin-only endpoint, and the application has no endpoint that edits or deletes entries | `adminRoutes.js`, `auditLogModel.js` | `adminSecurity.test.js` |
 
 ---
 
@@ -1240,7 +1374,10 @@ Part 3 evidence screenshots are linked from the sections they support:
 | [Income & Tax tab](screenshots/tax-01-income-tax-tab.png), [charts](screenshots/tax-02-charts.png), [expenses entered](screenshots/tax-03-expenses-entered.png) and [How we estimate your tax](screenshots/tax-04-how-we-estimate.png) | [Tax calculation](#tax-calculation) |
 | [`docker compose ps`](screenshots/docker-01-compose-ps.png) and [the app running in Docker](screenshots/docker-02-app-running.png) | [Docker](#docker) |
 | [Docker job passing](screenshots/ci-04-docker-job-green.png), [Newman results](screenshots/ci-05-newman-results.png) and [ZAP baseline report](screenshots/zap-01-report.png) | [CI/CD pipeline](#cicd-pipeline) |
-> ✏️ **NIKKITA:** add your logging and security feature screenshots.
+| [Better Stack Live tail showing login, booking and transaction events](screenshots/logging-01-better-stack-live-tail.png), [failed logins and a lockout](screenshots/logging-02-better-stack-lockout-events.png) and [a logged-out token being reused](screenshots/logging-03-better-stack-revoked-token.png) | [Logging and monitoring](#logging-and-monitoring) |
+| [A locked account with its Unlock button on the Admin page](screenshots/lockout-01-admin-locked-account.jpeg) | [Account lockout](#account-lockout) |
+| [The Audit log tab on the Admin page](screenshots/audit-01-admin-audit-log.jpeg) | [Security audit log](#security-audit-log) |
+| [Logout succeeding](screenshots/revocation-02-logout-200.png) and [the old token rejected with 401](screenshots/revocation-01-old-token-rejected.png) | [JWT revocation on logout](#jwt-revocation-on-logout) |
 
 ### 🖥️ The application (Part 2)
 
@@ -1278,8 +1415,8 @@ These screenshots from Part 2 still show the current application, apart from the
 | Member | Student number | Part 3 responsibilities |
 |--------|:--------------:|-------------------------|
 | **Viandra Kistasamy** | ST10445089 | Edit gig feature (Part 2 feedback), backend Jest tests, CI/CD pipeline, dependency audit fixes, Gitleaks secret scanning, CodeQL and ESLint static analysis and fixes, security review, README structure |
-| **Kaitlyn Pillay** | ST10437630 | ✏️ **KAITLYN:** SARS 2026/27 tax calculation and its unit tests, business expenses input with validation on the frontend and backend, income per month and per gig, Income & Tax dashboard with charts, Dockerfiles and Docker Compose with health checks and start order, MongoDB connection retry, optional HTTPS, Nginx security headers, the Docker job in the pipeline (Newman and OWASP ZAP), and the README sections for these |
-| **Nikkita Ramsumair** | ST10445383 | ✏️ **NIKKITA:** add your responsibilities |
+| **Kaitlyn Pillay** | ST10437630 | SARS 2026/27 tax calculation and its unit tests, business expenses input with validation on the frontend and backend, income per month and per gig, Income & Tax dashboard with charts, Dockerfiles and Docker Compose with health checks and start order, MongoDB connection retry, optional HTTPS, Nginx security headers, the Docker job in the pipeline (Newman and OWASP ZAP), and the README sections for these |
+| **Nikkita Ramsumair** | ST10445383 |   Logging with Winston and Better Stack, account lockout with admin unlock, the security audit log, JWT revocation on logout, the backend and frontend tests for these features, the security review rows and README sections for them, the Postman fix that keeps lockout from affecting the rate-limit runs, screenshots and the demonstration video |
 
 ---
 
@@ -1303,6 +1440,8 @@ OWASP Foundation, 2025. *A03:2025 – Software Supply Chain Failures*. [Online] 
 South African Revenue Service (SARS), 2026. *Rates of tax for individuals*. [Online] Available at: https://www.sars.gov.za/tax-rates/income-tax/rates-of-tax-for-individuals/ [Accessed 4 November 2026].
  
 ZAP, 2026. *ZAP - Baseline Scan*. [Online] Available at: https://www.zaproxy.org/docs/docker/baseline-scan/ [Accessed 4 November 2026].
+
+  Better Stack, 2026. *Better Stack Winston transport*. [Online] Available at: https://betterstack.com/docs/logs/javascript/winston [Accessed 1 November 2026].
 
 
 > ✏️ **NIKKITA (final step):** before submission, search the README for `✏️` and make sure every placeholder has been filled in and removed. Check the figures (test counts, alert counts) still match the merged code.
