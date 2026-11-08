@@ -36,7 +36,16 @@ export function AuthProvider({ children }) {
     await apiClient.post('/auth/register', { email, password, role });
   }
 
-  function logout() {
+  // Tells the API to revoke the token first, so a copy of it stops working,
+  // then clears the saved session. The session is cleared even if the request
+  // fails (for example the token had already expired), so the user is
+  // always logged out on this device.
+  async function logout() {
+    try {
+      await apiClient.post('/auth/logout');
+    } catch {
+      // Nothing more to do: the token is removed below either way
+    }
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setSession({ token: null, user: null });
