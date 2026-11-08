@@ -1,3 +1,8 @@
+// The blacklist lives in MongoDB. These tests have no database, so it is
+// replaced with a fake that says no token is revoked.
+jest.mock('../src/models/revokedTokenModel', () => ({
+  exists: jest.fn().mockResolvedValue(null),
+}));
 const express = require('express');
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
