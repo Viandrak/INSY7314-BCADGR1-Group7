@@ -28,7 +28,7 @@
         "url": "{{baseUrl}}/api/auth/login",
         "body": {
           "mode": "raw",
-          "raw": "{\"email\":\"freelancer1@hustlehub.com\",\"password\":\"WrongPassword1\"}"
+          "raw": "{\"email\":\"ratelimit.target@hustlehub.com\",\"password\":\"WrongPassword1\"}"
         }
       }
     },
@@ -55,7 +55,7 @@
         "url": "{{baseUrl}}/api/auth/login",
         "body": {
           "mode": "raw",
-          "raw": "{\"email\":\"freelancer1@hustlehub.com\",\"password\":\"WrongPassword1\"}"
+          "raw": "{\"email\":\"ratelimit.target@hustlehub.com\",\"password\":\"WrongPassword1\"}"
         }
       }
     },
@@ -82,7 +82,7 @@
         "url": "{{baseUrl}}/api/auth/login",
         "body": {
           "mode": "raw",
-          "raw": "{\"email\":\"freelancer1@hustlehub.com\",\"password\":\"WrongPassword1\"}"
+          "raw": "{\"email\":\"ratelimit.target@hustlehub.com\",\"password\":\"WrongPassword1\"}"
         }
       }
     },
@@ -109,7 +109,7 @@
         "url": "{{baseUrl}}/api/auth/login",
         "body": {
           "mode": "raw",
-          "raw": "{\"email\":\"freelancer1@hustlehub.com\",\"password\":\"WrongPassword1\"}"
+          "raw": "{\"email\":\"ratelimit.target@hustlehub.com\",\"password\":\"WrongPassword1\"}"
         }
       }
     },
@@ -136,7 +136,7 @@
         "url": "{{baseUrl}}/api/auth/login",
         "body": {
           "mode": "raw",
-          "raw": "{\"email\":\"freelancer1@hustlehub.com\",\"password\":\"WrongPassword1\"}"
+          "raw": "{\"email\":\"ratelimit.target@hustlehub.com\",\"password\":\"WrongPassword1\"}"
         }
       }
     },
@@ -163,7 +163,7 @@
         "url": "{{baseUrl}}/api/auth/login",
         "body": {
           "mode": "raw",
-          "raw": "{\"email\":\"freelancer1@hustlehub.com\",\"password\":\"WrongPassword1\"}"
+          "raw": "{\"email\":\"ratelimit.target@hustlehub.com\",\"password\":\"WrongPassword1\"}"
         }
       }
     },
@@ -190,7 +190,7 @@
         "url": "{{baseUrl}}/api/auth/login",
         "body": {
           "mode": "raw",
-          "raw": "{\"email\":\"freelancer1@hustlehub.com\",\"password\":\"WrongPassword1\"}"
+          "raw": "{\"email\":\"ratelimit.target@hustlehub.com\",\"password\":\"WrongPassword1\"}"
         }
       }
     },
@@ -217,7 +217,7 @@
         "url": "{{baseUrl}}/api/auth/login",
         "body": {
           "mode": "raw",
-          "raw": "{\"email\":\"freelancer1@hustlehub.com\",\"password\":\"WrongPassword1\"}"
+          "raw": "{\"email\":\"ratelimit.target@hustlehub.com\",\"password\":\"WrongPassword1\"}"
         }
       }
     },
@@ -244,7 +244,7 @@
         "url": "{{baseUrl}}/api/auth/login",
         "body": {
           "mode": "raw",
-          "raw": "{\"email\":\"freelancer1@hustlehub.com\",\"password\":\"WrongPassword1\"}"
+          "raw": "{\"email\":\"ratelimit.target@hustlehub.com\",\"password\":\"WrongPassword1\"}"
         }
       }
     },
@@ -271,7 +271,7 @@
         "url": "{{baseUrl}}/api/auth/login",
         "body": {
           "mode": "raw",
-          "raw": "{\"email\":\"freelancer1@hustlehub.com\",\"password\":\"WrongPassword1\"}"
+          "raw": "{\"email\":\"ratelimit.target@hustlehub.com\",\"password\":\"WrongPassword1\"}"
         }
       }
     },
@@ -301,7 +301,7 @@
         "url": "{{baseUrl}}/api/auth/login",
         "body": {
           "mode": "raw",
-          "raw": "{\"email\":\"freelancer1@hustlehub.com\",\"password\":\"WrongPassword1\"}"
+          "raw": "{\"email\":\"ratelimit.target@hustlehub.com\",\"password\":\"WrongPassword1\"}"
         }
       }
     }

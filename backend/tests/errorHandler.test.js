@@ -1,6 +1,12 @@
+// Replace the logger so the tests can check what was logged
+jest.mock('../src/utils/logger', () => ({
+  logger: { warn: jest.fn(), info: jest.fn(), error: jest.fn() },
+  logServerError: jest.fn(),
+}));
 const express = require('express');
 const request = require('supertest');
 const { notFoundHandler, centralErrorHandler } = require('../src/middleware/errorHandler');
+const { logServerError } = require('../src/utils/logger');
 
 // Builds a small test app with routes that throw different kinds of errors,
 // followed by the real not-found and central error handlers.
@@ -29,15 +35,7 @@ function buildApp() {
 describe('Not-found and central error handlers', () => {
   const app = buildApp();
 
-  // The error handler logs errors on the server. Silence that output in
-  // the test run, but keep track of it so we can check logging happened.
-  let consoleErrorSpy;
-  beforeEach(() => {
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-  });
-  afterEach(() => {
-    consoleErrorSpy.mockRestore();
-  });
+  
 
   test('returns 404 in the standard JSON format for an unknown route', async () => {
     const res = await request(app).get('/does-not-exist');
@@ -77,7 +75,11 @@ describe('Not-found and central error handlers', () => {
 
   test('still logs the full error on the server for debugging', async () => {
     await request(app).get('/crash');
-    expect(consoleErrorSpy).toHaveBeenCalled();
+    expect(logServerError).toHaveBeenCalledWith(
+      'request.error',
+      expect.objectContaining({ message: expect.stringContaining('hunter2') }),
+      expect.objectContaining({ method: 'GET', path: '/crash' })
+    );
   });
 
   test('passes on the message for errors that set their own non-500 status', async () => {

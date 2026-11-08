@@ -1,9 +1,12 @@
+
 const crypto = require('crypto');
 const mongoose = require('mongoose');
 const Booking = require('../models/bookingModel');
 const Gig = require('../models/gigModel');
 const Transaction = require('../models/transactionModel');
 const { isValidObjectId } = require('../middleware/objectIdMiddleware');
+const { recordAccessDenied } = require('../services/auditService');
+const { logger, logServerError } = require('../utils/logger');
 const { sendSuccess, sendError } = require('../utils/responseHandler');
 
 // Generates a simulated confirmation reference, e.g. HH-7F3A9C21.
@@ -32,6 +35,7 @@ async function createBooking(req, res) {
     // Prevent users booking their own gigs, which would create
     // artificial transactions and inflate their recorded income.
     if (gig.freelancer.toString() === req.user.id) {
+      await recordAccessDenied(req, 'Tried to book their own gig');
       return sendError(res, 403, 'You cannot book your own gig.');
     }
 
@@ -69,11 +73,27 @@ async function createBooking(req, res) {
       );
     });
 
+    logger.info('booking.created', {
+      bookingId: booking.id,
+      reference: booking.reference,
+      clientId: req.user.id,
+      freelancerId: String(gig.freelancer),
+      amount: booking.amount,
+    });
+
+    logger.info('transaction.created', {
+      transactionId: transaction.id,
+      bookingId: booking.id,
+      freelancerId: String(gig.freelancer),
+      amount: transaction.amount,
+    });
+
     return sendSuccess(res, 201, 'Booking confirmed. This is a simulated confirmation; no payment was processed.', {
       booking,
       transaction,
     });
   } catch (err) {
+    logServerError('booking.createBooking', err);
     return sendError(res, 500, 'An unexpected error occurred while creating the booking.');
   }
 }
@@ -90,6 +110,7 @@ async function getMyBookings(req, res) {
       bookings,
     });
   } catch (err) {
+    logServerError('booking.getMyBookings', err);
     return sendError(res, 500, 'An unexpected error occurred while retrieving your bookings.');
   }
 }
@@ -107,6 +128,7 @@ async function getReceivedBookings(req, res) {
       bookings,
     });
   } catch (err) {
+    logServerError('booking.getReceivedBookings', err);
     return sendError(res, 500, 'An unexpected error occurred while retrieving bookings received.');
   }
 }

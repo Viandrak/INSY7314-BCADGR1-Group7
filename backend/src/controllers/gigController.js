@@ -1,4 +1,7 @@
+
 const Gig = require('../models/gigModel');
+const { recordAccessDenied } = require('../services/auditService');
+const { logger, logServerError } = require('../utils/logger');
 const { sendSuccess, sendError } = require('../utils/responseHandler');
 
 const GIG_CATEGORIES = ['Design', 'Development', 'Writing', 'Marketing', 'Tutoring', 'Other'];
@@ -20,11 +23,14 @@ async function createGig(req, res) {
       deliveryDays,
     });
 
+    logger.info('gig.created', { gigId: gig.id, userId: req.user.id, category: gig.category, price: gig.price });
+
     return sendSuccess(res, 201, 'Gig created successfully.', { gig });
   } catch (err) {
     if (err.name === 'ValidationError') {
       return sendError(res, 400, 'Invalid gig details. Please check all fields and try again.');
     }
+    logServerError('gig.createGig', err);
     return sendError(res, 500, 'An unexpected error occurred while creating the gig.');
   }
 }
@@ -51,6 +57,7 @@ async function getAllGigs(req, res) {
 
     return sendSuccess(res, 200, 'Gigs retrieved successfully.', { count: gigs.length, gigs });
   } catch (err) {
+    logServerError('gig.getAllGigs', err);
     return sendError(res, 500, 'An unexpected error occurred while retrieving gigs.');
   }
 }
@@ -62,6 +69,7 @@ async function getMyGigs(req, res) {
 
     return sendSuccess(res, 200, 'Your gigs retrieved successfully.', { count: gigs.length, gigs });
   } catch (err) {
+    logServerError('gig.getMyGigs', err);
     return sendError(res, 500, 'An unexpected error occurred while retrieving your gigs.');
   }
 }
@@ -76,6 +84,7 @@ async function getGigById(req, res) {
 
     return sendSuccess(res, 200, 'Gig retrieved successfully.', { gig });
   } catch (err) {
+    logServerError('gig.getGigById', err);
     return sendError(res, 500, 'An unexpected error occurred while retrieving the gig.');
   }
 }
@@ -84,7 +93,7 @@ async function updateGig(req, res) {
   // Only allow changes to specific gig fields. Fields like "freelancer"
   // are ignored, so ownership can never be transferred through an update.
   const updates = {};
-   for (const field of UPDATABLE_GIG_FIELDS) {
+  for (const field of UPDATABLE_GIG_FIELDS) {
     // field always comes from the fixed UPDATABLE_GIG_FIELDS list above, never from the request
     // eslint-disable-next-line security/detect-object-injection
     if (req.body[field] !== undefined) {
@@ -106,17 +115,21 @@ async function updateGig(req, res) {
 
     // Ownership check: only the freelancer who created the gig may update it
     if (gig.freelancer.toString() !== req.user.id) {
+      await recordAccessDenied(req, 'Tried to update a gig owned by someone else');
       return sendError(res, 403, 'You can only update your own gigs.');
     }
 
     gig.set(updates);
     await gig.save(); // save() runs the model's validation rules on the new values
 
+    logger.info('gig.updated', { gigId: gig.id, userId: req.user.id, fields: Object.keys(updates) });
+
     return sendSuccess(res, 200, 'Gig updated successfully.', { gig });
   } catch (err) {
     if (err.name === 'ValidationError') {
       return sendError(res, 400, 'Invalid gig details. Please check all fields and try again.');
     }
+    logServerError('gig.updateGig', err);
     return sendError(res, 500, 'An unexpected error occurred while updating the gig.');
   }
 }
@@ -131,6 +144,7 @@ async function deleteGig(req, res) {
 
     // Ownership check: only the freelancer who created the gig may delete it
     if (gig.freelancer.toString() !== req.user.id) {
+      await recordAccessDenied(req, 'Tried to delete a gig owned by someone else');
       return sendError(res, 403, 'You can only delete your own gigs.');
     }
 
@@ -138,8 +152,11 @@ async function deleteGig(req, res) {
     // so booking and transaction history stays intact after deletion.
     await gig.deleteOne();
 
+    logger.info('gig.deleted', { gigId: gig.id, userId: req.user.id });
+
     return sendSuccess(res, 200, 'Gig deleted successfully.');
   } catch (err) {
+    logServerError('gig.deleteGig', err);
     return sendError(res, 500, 'An unexpected error occurred while deleting the gig.');
   }
 }

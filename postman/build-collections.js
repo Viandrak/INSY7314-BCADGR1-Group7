@@ -142,8 +142,11 @@ save(
 // ---------- 2. Login rate limit (run alone, after a backend restart) ----------
 const loginAttempts = [];
 for (let i = 1; i <= 11; i++) {
+   // An email that does not exist, on purpose: account lockout is stored in the database,
+  // so wrong guesses against a real demo account would lock it for 15 minutes and
+  // break every later login. The IP rate limit counts these attempts all the same.
   loginAttempts.push(q(`Attempt ${i} - Login with wrong password`, 'POST', '/api/auth/login', {
-    b: { email: 'freelancer1@hustlehub.com', password: 'WrongPassword1' },
+    b: { email: 'ratelimit.target@hustlehub.com', password: 'WrongPassword1' },
     tests: i <= 10
       ? [`pm.test('Attempt ${i} returns 401 (wrong password, not yet limited)', () => pm.response.to.have.status(401));`]
       : [

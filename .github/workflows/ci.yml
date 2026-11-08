@@ -107,7 +107,8 @@ jobs:
       # that was committed and later deleted would still be caught (Microsoft, 2026a)
       - name: Scan full git history for secrets
         run: |
-          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz | tar -xz gitleaks
+          curl -sSfL --retry 5 --retry-delay 15 --retry-all-errors -o gitleaks.tar.gz https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz
+          tar -xzf gitleaks.tar.gz gitleaks
           ./gitleaks git . --redact --verbose --exit-code 1
       
       
@@ -128,6 +129,10 @@ jobs:
       # the real limits.
       AUTH_RATE_LIMIT: '1000'
       BOOKING_RATE_LIMIT: '1000'
+      # Cloud logging. Stored as GitHub Secrets, never written in this file. If the
+      # secrets are missing the API simply logs to the console.
+      BETTER_STACK_SOURCE_TOKEN: ${{ secrets.BETTER_STACK_SOURCE_TOKEN }}
+      BETTER_STACK_INGESTING_HOST: ${{ secrets.BETTER_STACK_INGESTING_HOST }}
     steps:
       - name: Check out code
         uses: actions/checkout@v5

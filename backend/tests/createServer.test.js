@@ -33,8 +33,16 @@ describe('createServer', () => {
   });
 
   test('with HTTPS on it loads the certificates and fails clearly when they are missing', () => {
-    const readSpy = jest.spyOn(fs, 'readFileSync').mockImplementation(() => {
-      throw new Error('ENOENT: no such file or directory');
+    // Only the certificate files are made to "go missing". Every other file read
+    // (for example by Jest itself) keeps working, or the test runner can break on Windows.
+    const realReadFileSync = fs.readFileSync;
+    const readSpy = jest.spyOn(fs, 'readFileSync').mockImplementation((path, ...args) => {
+      if (String(path).includes('certs')) {
+        throw new Error('ENOENT: no such file or directory');
+      }
+      // The path is passed straight through to the real function, unchanged
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
+      return realReadFileSync(path, ...args);
     });
 
     expect(() => createServer(express(), true)).toThrow(/ENOENT/);

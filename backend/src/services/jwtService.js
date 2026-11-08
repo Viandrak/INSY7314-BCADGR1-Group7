@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -16,6 +17,8 @@ function generateToken(user) {
       expiresIn: JWT_EXPIRES_IN,
       issuer: JWT_ISSUER,
       audience: JWT_AUDIENCE,
+      // A unique ID for every token, so a single token can be revoked at logout
+      jwtid: crypto.randomUUID(),
     }
   );
 }

@@ -1,4 +1,5 @@
 const rateLimit = require('express-rate-limit');
+const { logger } = require('../utils/logger');
 
 // Works out how many seconds remain until the client's limit resets
 function secondsUntilReset(req, windowMs) {
@@ -10,14 +11,22 @@ function secondsUntilReset(req, windowMs) {
 }
 
 // Builds a rate limiter that returns a clear, consistent 429 response
-function createLimiter({ windowMs, limit, message, keyGenerator }) {
+function createLimiter({ name, windowMs, limit, message, keyGenerator }) {
   const options = {
     windowMs,
     limit,
     standardHeaders: 'draft-7', // Sends RateLimit headers so clients can see their remaining requests
-    legacyHeaders: false,       
+    legacyHeaders: false,
     handler: (req, res) => {
       const retryAfterSeconds = secondsUntilReset(req, windowMs);
+      logger.warn('ratelimit.hit', {
+        limiter: name,
+        ip: req.ip,
+        userId: req.user && req.user.id,
+        method: req.method,
+        path: (req.originalUrl || '').split('?')[0],
+        retryAfterSeconds,
+      });
       res.set('Retry-After', String(retryAfterSeconds));
       return res.status(429).json({
         success: false,
@@ -39,8 +48,9 @@ function createLimiter({ windowMs, limit, message, keyGenerator }) {
 // Login and registration: 10 attempts per IP every 15 minutes.
 // Limits brute-force password guessing and mass account creation.
 const authLimiter = createLimiter({
+  name: 'auth',
   windowMs: 15 * 60 * 1000,
-    limit: Number(process.env.AUTH_RATE_LIMIT) || 10,
+  limit: Number(process.env.AUTH_RATE_LIMIT) || 10,
   message: 'Too many authentication attempts. Please try again later.',
 });
 
@@ -49,13 +59,14 @@ const authLimiter = createLimiter({
 // cannot flood the system with bookings and transaction records.
 // Must run after the authenticate middleware.
 const bookingLimiter = createLimiter({
+  name: 'booking',
   windowMs: 15 * 60 * 1000,
-    limit: Number(process.env.BOOKING_RATE_LIMIT) || 5,
+  limit: Number(process.env.BOOKING_RATE_LIMIT) || 5,
   message: 'Too many booking requests. Please wait before making another booking.',
   keyGenerator: (req) => `user:${req.user.id}`,
 });
 
-// General limit for every API route: 300 requests per IP every 15 minutes (Microsoft, 2026b).
+// General limit for every API route: 300 requests per IP every 15 minutes.
 const configuredApiLimit = Number(process.env.API_RATE_LIMIT);
 const apiLimit =
   Number.isSafeInteger(configuredApiLimit) && configuredApiLimit > 0
@@ -63,6 +74,7 @@ const apiLimit =
     : 300;
 
 const apiLimiter = createLimiter({
+  name: 'api',
   windowMs: 15 * 60 * 1000,
   limit: apiLimit,
   message: 'Too many requests. Please try again later.',

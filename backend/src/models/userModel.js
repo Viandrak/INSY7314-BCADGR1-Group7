@@ -22,6 +22,17 @@ const userSchema = new mongoose.Schema(
       enum: ['client', 'freelancer', 'admin'],
       required: true,
     },
+    // Account lockout: stored in the database, so the count survives server
+    // restarts and counts attempts from every IP address together.
+    failedLoginAttempts: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    lockUntil: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,
