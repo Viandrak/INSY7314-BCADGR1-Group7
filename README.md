@@ -64,8 +64,8 @@ Because the platform processes sensitive information — user credentials, trans
 |------|--------|--------|
 | **Gig management** | Freelancers could create and delete gigs | Freelancers can also **edit** their gigs from the dashboard *(Part 2 feedback)* |
 | **CI/CD** | None | GitHub Actions pipeline that tests, lints, builds and security-scans the backend and frontend on every push |
-| **Backend tests** | Postman and Newman only | 192 automated Jest tests that run without a database, plus the existing Postman collections |
-| **Frontend tests** | 14 tests | 64 tests, including the edit gig flow and protected browse routes |
+| **Backend tests** | Postman and Newman only | 232 automated Jest tests that run without a database, plus the existing Postman collections |
+| **Frontend tests** | 14 tests | 72 tests, including the admin lockout and audit log features, the edit gig flow |
 | **Static analysis** | None | CodeQL (security-extended queries) and ESLint with `eslint-plugin-security` |
 | **Dependency security** | Not checked | `npm audit` on both apps; all critical, high and moderate vulnerabilities fixed |
 | **Secret scanning** | Not checked | Gitleaks on every push, plus a scan of the full git history |
@@ -245,7 +245,7 @@ flowchart LR
 <a id="database-and-data-models"></a>
 ## 🗄️ Database and data models
 
-  HustleHub+ uses **MongoDB Atlas** with six collections, defined as Mongoose schemas in `src/models`. The diagram shows the four main ones, and the two added in Part 3 are described under **Part 3 additions** below.
+HustleHub+ uses **MongoDB Atlas** with six collections, defined as Mongoose schemas in `src/models`. The diagram shows the four main ones, and the two added in Part 3 are described under **Part 3 additions** below.
 
 ```mermaid
 erDiagram
@@ -296,7 +296,7 @@ All models use automatic `createdAt` and `updatedAt` timestamps.
   |-------|----------------|-----|
   | `User` | `failedLoginAttempts` (number) and `lockUntil` (date) | Account lockout is stored in the database, so it survives a server restart and counts attempts from every IP address together |
   | `AuditLog` (new collection) | `event`, `user`, `email`, `actor`, `ip`, `method`, `path`, `details` and `createdAt` | One document per security event, shown to admins on the Admin page |
-  | `RevokedToken` (new collection) | `jti` (unique) and `expiresAt` | The blacklist of tokens that were logged out. A TTL index on `expiresAt` deletes each entry automatically when the token would have expired anyway (MongoDB, Inc., 2026) |
+  | `RevokedToken` (new collection) | `jti` (unique) and `expiresAt` | The blacklist of tokens that were logged out. A TTL index on `expiresAt` deletes each entry automatically when the token would have expired anyway |
 
 **💡 Design decisions**
 
@@ -593,7 +593,7 @@ Part 3 adds three security features beyond the minimum requirements. All three a
 
 ### Account lockout
 
-**How it works.** After 5 failed logins the account is locked for 15 minutes (OWASP Foundation, 2026a). The failed count (`failedLoginAttempts`) and the lock time (`lockUntil`) are stored on the user in MongoDB. A correct password resets the count to 0, and the lock ends by itself after 15 minutes. While an account is locked, even the correct password is refused, and further attempts do not extend the lock.
+**How it works.** After 5 failed logins the account is locked for 15 minutes. The failed count (`failedLoginAttempts`) and the lock time (`lockUntil`) are stored on the user in MongoDB. A correct password resets the count to 0, and the lock ends by itself after 15 minutes. While an account is locked, even the correct password is refused, and further attempts do not extend the lock.
 
 **How it differs from the rate limit.** Both controls work together, and they protect against different things:
 
@@ -658,7 +658,7 @@ Evidence: [the Audit log tab on the Admin page](screenshots/audit-01-admin-audit
 
 **How it works.**
 
-1. `POST /api/auth/logout` stores the token's `jti` and its expiry time in the `RevokedToken` collection. The token itself is never stored (OWASP Foundation, 2026c).
+1. `POST /api/auth/logout` stores the token's `jti` and its expiry time in the `RevokedToken` collection. The token itself is never stored.
 2. A TTL index on `expiresAt` makes MongoDB delete each entry automatically once the token would have expired anyway, so the blacklist never grows without limit.
 3. The `authenticate` middleware checks the blacklist after it verifies the signature, issuer, audience and algorithm. A revoked token is refused with `401`. A token with no `jti` is also refused with `401`. If the blacklist cannot be checked, the request is refused instead of allowed.
 4. The frontend logout calls this endpoint first, and then clears the saved session even if the request fails.
@@ -706,7 +706,7 @@ Cloud logging is switched on by two settings, `BETTER_STACK_SOURCE_TOKEN` and `B
 - **Spotting stolen tokens.** `auth.token.revoked_reuse` means a logged-out token is being used again, which is a sign it was copied.
 - **Spotting access control probing.** Repeated `access.denied` events from one user show someone trying routes or records that are not theirs.
 - **Financial integrity.** `booking.created` and `transaction.created` give a trail for every booking and payment record, which helps when investigating a dispute or a suspicious income figure.
-- **Finding faults.** `request.error` events with stack traces let the team fix problems that users only see as a generic message (OWASP Foundation, 2026b).
+- **Finding faults.** `request.error` events with stack traces let the team fix problems that users only see as a generic message.
 - **Evidence after an incident.** Logs kept on a separate platform survive even if the server or its database is damaged, and an attacker who gets into the server cannot quietly erase them.
 
 **How to view the logs.** Open the source in Better Stack and use **Live tail**, or search the events. Locally, run the backend and read the console, or run `docker compose logs backend` when using Docker.
@@ -1054,10 +1054,10 @@ The Jest tests do not call the full routes and controllers together (except regi
 
 ### Backend testing (Jest)
 
-The backend has **192 Jest tests in 17 files**, in `backend/tests/`. Each test builds a small Express app containing only the middleware it is testing, so **no database, `.env` file or HTTPS certificate is needed**. A setup file (`tests/setup.js`) gives tests a safe, test-only JWT secret.
+The backend has **232 Jest tests in 22 files**, in `backend/tests/`. Each test builds a small Express app containing only the middleware it is testing, so **no database, `.env` file or HTTPS certificate is needed**. A setup file (`tests/setup.js`) gives tests a safe, test-only JWT secret.
 
 <details>
-<summary><b>🧪 All 17 backend test files</b></summary>
+<summary><b>🧪 All 22 backend test files</b></summary>
 
 <br>
 
@@ -1101,10 +1101,10 @@ npm run lint
 
 Frontend tests use **Vitest** with **React Testing Library**, which renders components in a simulated browser (jsdom) and queries them the way a person would — by label, role and visible text — rather than by implementation detail. The API is mocked in every test, so tests run without a live backend or database and never make real network calls.
 
-There are **64 tests in 9 files**:
+There are **72 tests in 10 files**:
 
 <details>
-<summary><b>🧪 All 9 frontend test files</b></summary>
+<summary><b>🧪 All 10 frontend test files</b></summary>
 
 <br>
 
@@ -1185,8 +1185,8 @@ There are two workflow files in `.github/workflows/`:
 
 | Job | Steps | Fails when |
 |-----|-------|-----------|
-| **Backend tests** | Install with `npm ci` → lint (ESLint and `eslint-plugin-security`) → 192 Jest tests | Any lint error or warning, or any failing test |
-| **Frontend lint, tests and build** | Install with `npm ci` → lint → 64 Vitest tests → production build | Any lint error, failing test or build error |
+| **Backend tests** | Install with `npm ci` → lint (ESLint and `eslint-plugin-security`) → 232 Jest tests | Any lint error or warning, or any failing test |
+| **Frontend lint, tests and build** | Install with `npm ci` → lint → 72 Vitest tests → production build | Any lint error, failing test or build error |
 | **Security scans** | `npm audit` on both apps → Gitleaks on new commits → Gitleaks on the full git history | Any high or critical vulnerability, or any secret found |
 | **Docker stack, API tests and ZAP scan** | Only runs after the backend and frontend jobs pass → `docker compose up --build --wait` (mongo, backend and frontend all healthy) → `docker compose ps -a` → `curl --fail` on the backend health endpoint and the frontend → Newman (main API collection, then the login and booking rate-limit tests) → OWASP ZAP baseline scan of the frontend → container logs on failure → `docker compose down` always | A container is unhealthy, a health check or `curl` fails, any Newman assertion fails, or ZAP finds a medium or high risk alert |
 
@@ -1405,7 +1405,7 @@ These screenshots from Part 2 still show the current application, apart from the
 <a id="demonstration-video"></a>
 ## 🎥 Demonstration video
 
-> ✏️ **NIKKITA:** add the Part 3 demonstration video link. It should show registration and login, creating and editing a gig, a client booking it and the transaction being recorded, the Income & Tax dashboard, the logs on the cloud platform, the app running in Docker, and a green pipeline run.
+https://youtu.be/bJ0jsmeK7Qs?si=6TxnBpvHT7YZ_7Bt
 
 ---
 
@@ -1438,10 +1438,11 @@ OWASP Foundation, 2021. *A03:2021 – Injection*. [Online] Available at: https:/
 OWASP Foundation, 2025. *A03:2025 – Software Supply Chain Failures*. [Online] Available at: https://owasp.org/Top10/2025/A03_2025-Software_Supply_Chain_Failures/ [Accessed 29 October 2026].
  
 South African Revenue Service (SARS), 2026. *Rates of tax for individuals*. [Online] Available at: https://www.sars.gov.za/tax-rates/income-tax/rates-of-tax-for-individuals/ [Accessed 4 November 2026].
+
+winston contributors, 2026. *winston: A logger for just about everything*. [Online] Available at: https://www.npmjs.com/package/winston [Accessed 1 November 2026].
  
 ZAP, 2026. *ZAP - Baseline Scan*. [Online] Available at: https://www.zaproxy.org/docs/docker/baseline-scan/ [Accessed 4 November 2026].
 
-  Better Stack, 2026. *Better Stack Winston transport*. [Online] Available at: https://betterstack.com/docs/logs/javascript/winston [Accessed 1 November 2026].
+Better Stack, 2026. *Better Stack Winston transport*. [Online] Available at: https://betterstack.com/docs/logs/javascript/winston [Accessed 1 November 2026].
 
-
-> ✏️ **NIKKITA (final step):** before submission, search the README for `✏️` and make sure every placeholder has been filled in and removed. Check the figures (test counts, alert counts) still match the merged code.
+TechTarget, 2025. *Account lockout policy: Setup and best practices explained*. [Online] Available at: https://www.techtarget.com/news/Account-lockout-policy-Setup-and-best-practices-explained/ [Accessed 1 November 2026].
