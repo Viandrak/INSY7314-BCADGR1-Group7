@@ -27,7 +27,7 @@ Because the platform processes sensitive information — user credentials, trans
 |:----:|-------|:------:|
 | **1** | Secure backend foundations | ✅ Complete |
 | **2** | Full-stack application development | ✅ Complete |
-| **3** | DevSecOps, monitoring and finalisation | ✅ **This submission** |
+| **3** | DevSecOps, monitoring and finalisation | ✅ **This submission - 9th Nov** |
 
 ## 📑 Table of contents
 
@@ -1414,7 +1414,7 @@ https://youtu.be/bJ0jsmeK7Qs?si=6TxnBpvHT7YZ_7Bt
 
 | Member | Student number | Part 3 responsibilities |
 |--------|:--------------:|-------------------------|
-| **Viandra Kistasamy** | ST10445089 | Edit gig feature (Part 2 feedback), backend Jest tests, CI/CD pipeline, dependency audit fixes, Gitleaks secret scanning, CodeQL and ESLint static analysis and fixes, security review, README structure |
+| **Viandra Kistasamy** | ST10445089 | Edit gig feature (Part 2 feedback), backend Jest tests, GitHub Actions CI/CD pipeline with a deliberately failing test to prove it fails correctly, dependency audit fixes, Gitleaks secret scanning of new commits and the full git history, CodeQL and ESLint static analysis with the prototype pollution and rate limit fixes, security review, README structure and the CI/CD, static analysis and scanning sections |
 | **Kaitlyn Pillay** | ST10437630 | SARS 2026/27 tax calculation and its unit tests, business expenses input with validation on the frontend and backend, income per month and per gig, Income & Tax dashboard with charts, Dockerfiles and Docker Compose with health checks and start order, MongoDB connection retry, optional HTTPS, Nginx security headers, the Docker job in the pipeline (Newman and OWASP ZAP), and the README sections for these |
 | **Nikkita Ramsumair** | ST10445383 |   Logging with Winston and Better Stack, account lockout with admin unlock, the security audit log, JWT revocation on logout, the backend and frontend tests for these features, the security review rows and README sections for them, the Postman fix that keeps lockout from affecting the rate-limit runs, screenshots and the demonstration video |
 
